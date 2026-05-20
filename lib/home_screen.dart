@@ -159,17 +159,34 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
+        centerTitle: true,
+        title: const Text(
+          'Nguyễn Tá Tưởng',
+          style: TextStyle(
+            color: Colors.tealAccent,
+            fontSize: 25,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.keyboard_arrow_down),
+          icon: const Icon(
+            Icons.keyboard_arrow_left_sharp,
+            color: Colors.tealAccent,
+          ),
+          iconSize: 50,
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.timer),
+            icon: const Icon(Icons.timer, color: Colors.tealAccent, size: 38),
             onPressed: _showSleepTimerBottomSheet,
           ),
           IconButton(
-            icon: Icon(_showVolumeSlider ? Icons.volume_up : Icons.volume_down),
+            icon: Icon(
+              _showVolumeSlider ? Icons.volume_up : Icons.volume_down,
+              color: Colors.tealAccent,
+              size: 38,
+            ),
             onPressed: () =>
                 setState(() => _showVolumeSlider = !_showVolumeSlider),
           ),
@@ -191,9 +208,18 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 300,
               height: 300,
-              color: Colors.grey[800],
-              child: const Icon(Icons.music_note, size: 100),
+              child: const Icon(
+                Icons.music_note,
+                size: 100,
+                color: Colors.tealAccent,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.grey[800],
+                borderRadius: BorderRadius.circular(1000),
+                border: Border.all(color: Colors.tealAccent, width: 3),
+              ),
             ),
+
             const SizedBox(height: 20),
             TextScroll(
               currentSong?.title ?? "Đang phát",
@@ -210,15 +236,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   widget.audioPlayer.seek(Duration(seconds: v.toInt())),
             ),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.skip_previous, size: 40),
+                  icon: const Icon(
+                    Icons.skip_previous,
+                    size: 50,
+                    color: (Colors.tealAccent),
+                  ),
                   onPressed: () => widget.audioPlayer.seekToPrevious(),
                 ),
                 IconButton(
                   icon: Icon(
                     isPlaying ? Icons.pause_circle : Icons.play_circle,
+                    color: (Colors.tealAccent),
                     size: 70,
                   ),
                   onPressed: () => isPlaying
@@ -226,7 +257,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       : widget.audioPlayer.play(),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.skip_next, size: 40),
+                  icon: const Icon(
+                    Icons.skip_next,
+                    size: 50,
+                    color: (Colors.tealAccent),
+                  ),
                   onPressed: () => widget.audioPlayer.seekToNext(),
                 ),
               ],

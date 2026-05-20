@@ -88,7 +88,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                 child: Center(
                   child: Text(
                     "Chưa có danh sách phát nào.",
-                    style: TextStyle(color: Colors.white),
+                    style: TextStyle(color: Colors.tealAccent),
                   ),
                 ),
               );
@@ -99,10 +99,13 @@ class _ListViewScreenState extends State<ListViewScreen> {
               itemCount: playlists.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  leading: const Icon(Icons.queue_music, color: Colors.white),
+                  leading: const Icon(
+                    Icons.queue_music,
+                    color: Colors.tealAccent,
+                  ),
                   title: Text(
                     playlists[index].playlist,
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.tealAccent),
                   ),
                   onTap: () async {
                     await _audioQuery.addToPlaylist(
@@ -140,16 +143,19 @@ class _ListViewScreenState extends State<ListViewScreen> {
           backgroundColor: const Color(0xFF2A2A3A),
           title: const Text(
             'Xác nhận xóa',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.tealAccent),
           ),
           content: Text(
             'Bạn có chắc chắn muốn xóa bài hát "${song.title}" khỏi thiết bị không? Hành động này không thể hoàn tác.',
-            style: const TextStyle(color: Colors.grey),
+            style: const TextStyle(color: Colors.tealAccent),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Hủy',
+                style: TextStyle(color: Colors.tealAccent),
+              ),
             ),
             TextButton(
               onPressed: () async {
@@ -205,26 +211,29 @@ class _ListViewScreenState extends State<ListViewScreen> {
           backgroundColor: const Color(0xFF2A2A3A),
           title: const Text(
             'Tạo Danh Sách Mới',
-            style: TextStyle(color: Colors.white),
+            style: TextStyle(color: Colors.tealAccent),
           ),
           content: TextField(
             controller: controller,
-            style: const TextStyle(color: Colors.white),
+            style: const TextStyle(color: Colors.tealAccent),
             decoration: const InputDecoration(
               hintText: 'Nhập tên danh sách...',
-              hintStyle: TextStyle(color: Colors.grey),
+              hintStyle: TextStyle(color: Colors.tealAccent),
               enabledBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: Colors.grey),
               ),
               focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white),
+                borderSide: BorderSide(color: Colors.tealAccent),
               ),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+              child: const Text(
+                'Hủy',
+                style: TextStyle(color: Colors.tealAccent),
+              ),
             ),
             TextButton(
               onPressed: () async {
@@ -234,7 +243,10 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   if (context.mounted) Navigator.pop(context);
                 }
               },
-              child: const Text('Tạo', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Tạo',
+                style: TextStyle(color: Colors.tealAccent),
+              ),
             ),
           ],
         );
@@ -250,15 +262,22 @@ class _ListViewScreenState extends State<ListViewScreen> {
         backgroundColor: Colors.black,
         appBar: AppBar(
           backgroundColor: Colors.black,
-          iconTheme: const IconThemeData(color: Colors.white),
-          actions: [
-            IconButton(icon: const Icon(Icons.search), onPressed: () {}),
-            IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
-          ],
+          centerTitle: true,
+          title: const Text(
+            'MUSIC APP',
+            style: TextStyle(
+              color: Colors.tealAccent,
+              letterSpacing: 3.0,
+              fontSize: 30,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          iconTheme: const IconThemeData(color: Colors.tealAccent),
+          actions: [],
           bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.white,
+            labelColor: Colors.tealAccent,
+            unselectedLabelColor: Colors.tealAccent,
+            indicatorColor: Colors.tealAccent,
             tabs: [
               Tab(text: 'Bài hát', icon: Icon(Icons.music_note)),
               Tab(text: 'Danh sách phát', icon: Icon(Icons.queue_music)),
@@ -269,7 +288,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
             ? const Center(
                 child: Text(
                   'Đang chờ cấp quyền...',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.tealAccent),
                 ),
               )
             : TabBarView(
@@ -286,33 +305,18 @@ class _ListViewScreenState extends State<ListViewScreen> {
                           children: [
                             const Row(
                               children: [
-                                Icon(Icons.sort, color: Colors.grey, size: 20),
+                                Icon(
+                                  Icons.sort,
+                                  color: Colors.tealAccent,
+                                  size: 20,
+                                ),
                                 SizedBox(width: 8),
                                 Text(
-                                  "Tên",
+                                  "Tên Bài Hát",
                                   style: TextStyle(
-                                    color: Colors.grey,
+                                    color: Colors.tealAccent,
                                     fontSize: 16,
                                   ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.shuffle,
-                                    color: Colors.grey,
-                                  ),
-                                  onPressed: () {},
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.play_circle_fill,
-                                    color: Colors.white,
-                                    size: 36,
-                                  ),
-                                  onPressed: () {},
                                 ),
                               ],
                             ),
@@ -335,7 +339,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                               return const Center(
                                 child: Text(
                                   'Không tìm thấy bài hát.',
-                                  style: TextStyle(color: Colors.white),
+                                  style: TextStyle(color: Colors.tealAccent),
                                 ),
                               );
 
@@ -348,7 +352,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                               return const Center(
                                 child: Text(
                                   'Không có bài hát nào.',
-                                  style: TextStyle(color: Colors.white),
+                                  style: TextStyle(color: Colors.tealAccent),
                                 ),
                               );
 
@@ -374,11 +378,25 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                     ),
                                     child: Icon(
                                       isPlayingThisSong
-                                          ? Icons.bar_chart
+                                          ? Icons.play_circle_outline
                                           : Icons.music_note,
                                       color: isPlayingThisSong
-                                          ? Colors.greenAccent
+                                          ? Colors.tealAccent
                                           : Colors.white70,
+                                      size: 28,
+                                      shadows: [
+                                        Shadow(
+                                          color: isPlayingThisSong
+                                              // Bóng màu xanh mờ khi đang phát
+                                              ? Colors.tealAccent.withOpacity(
+                                                  0.6,
+                                                ) // Bóng màu trắng mờ khi dừng
+                                              : Colors.white54,
+                                          // Độ tỏa sáng (bạn có thể tăng giảm số này)
+                                          blurRadius: 10.0,
+                                          offset: const Offset(0, 0),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   // HIỆU ỨNG CHỮ CHẠY ĐƯỢC ÁP DỤNG TẠI ĐÂY
@@ -395,7 +413,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                     pauseBetween: const Duration(seconds: 2),
                                     style: TextStyle(
                                       color: isPlayingThisSong
-                                          ? Colors.greenAccent
+                                          ? Colors.tealAccent
                                           : Colors.white,
                                       fontWeight: isPlayingThisSong
                                           ? FontWeight.bold
@@ -404,7 +422,9 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                   ),
                                   subtitle: Text(
                                     songs[index].artist ?? "Không biết",
-                                    style: const TextStyle(color: Colors.grey),
+                                    style: const TextStyle(
+                                      color: Colors.tealAccent,
+                                    ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -413,7 +433,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                   trailing: PopupMenuButton<int>(
                                     icon: const Icon(
                                       Icons.more_vert,
-                                      color: Colors.grey,
+                                      color: Colors.tealAccent,
                                     ),
                                     color: const Color(0xFF2A2A3A),
                                     onSelected: (value) {
@@ -430,7 +450,9 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                         value: 1,
                                         child: Text(
                                           'Thêm vào danh sách phát',
-                                          style: TextStyle(color: Colors.white),
+                                          style: TextStyle(
+                                            color: Colors.tealAccent,
+                                          ),
                                         ),
                                       ),
                                       const PopupMenuItem(
@@ -438,7 +460,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                         child: Text(
                                           'Xóa bài hát',
                                           style: TextStyle(
-                                            color: Colors.redAccent,
+                                            color: Colors.tealAccent,
                                           ),
                                         ),
                                       ),
@@ -484,19 +506,20 @@ class _ListViewScreenState extends State<ListViewScreen> {
                       ListTile(
                         leading: const Icon(
                           Icons.add_circle,
-                          color: Colors.white,
+                          color: Colors.tealAccent,
                           size: 40,
                         ),
                         title: const Text(
                           'Tạo danh sách phát mới',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Colors.tealAccent,
+                            fontSize: 25,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         onTap: () => _showCreatePlaylistDialog(),
                       ),
-                      const Divider(color: Colors.grey, height: 1),
+                      const Divider(color: Colors.tealAccent, height: 1),
                       Expanded(
                         child: FutureBuilder<List<PlaylistModel>>(
                           future: _audioQuery.queryPlaylists(),
@@ -509,7 +532,10 @@ class _ListViewScreenState extends State<ListViewScreen> {
                               return const Center(
                                 child: Text(
                                   'Chưa có danh sách phát.',
-                                  style: TextStyle(color: Colors.grey),
+                                  style: TextStyle(
+                                    color: Colors.tealAccent,
+                                    fontSize: 22,
+                                  ),
                                 ),
                               );
 
@@ -529,24 +555,27 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                 return ListTile(
                                   leading: const Icon(
                                     Icons.queue_music,
-                                    color: Colors.white,
+                                    color: Colors.tealAccent,
                                     size: 40,
                                   ),
                                   title: Text(
                                     playlists[index].playlist,
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.tealAccent,
                                       fontSize: 18,
                                     ),
                                   ),
                                   subtitle: Text(
                                     '$songCount bài hát',
-                                    style: const TextStyle(color: Colors.grey),
+                                    style: const TextStyle(
+                                      color: Colors.tealAccent,
+                                    ),
                                   ),
                                   trailing: IconButton(
                                     icon: const Icon(
                                       Icons.delete,
-                                      color: Colors.redAccent,
+                                      color: Colors.tealAccent,
+                                      size: 30,
                                     ),
                                     onPressed: () async {
                                       await _audioQuery.removePlaylist(
@@ -606,11 +635,11 @@ class _ListViewScreenState extends State<ListViewScreen> {
                         height: 46,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.grey,
+                          color: Colors.white54,
                         ),
                         child: const Icon(
                           Icons.music_note,
-                          color: Colors.white,
+                          color: Colors.tealAccent,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -629,14 +658,14 @@ class _ListViewScreenState extends State<ListViewScreen> {
                               delayBefore: const Duration(seconds: 2),
                               pauseBetween: const Duration(seconds: 2),
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: Colors.tealAccent,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
                               currentlyPlaying!.artist ?? "Không biết",
                               style: const TextStyle(
-                                color: Colors.grey,
+                                color: Colors.tealAccent,
                                 fontSize: 12,
                               ),
                               maxLines: 1,
@@ -648,7 +677,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                       IconButton(
                         icon: const Icon(
                           Icons.skip_previous,
-                          color: Colors.white,
+                          color: Colors.tealAccent,
                         ),
                         onPressed: () {
                           if (_audioPlayer.hasPrevious)
@@ -658,7 +687,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                       IconButton(
                         icon: Icon(
                           _audioPlayer.playing ? Icons.pause : Icons.play_arrow,
-                          color: Colors.white,
+                          color: Colors.tealAccent,
+                          size: 35,
                         ),
                         onPressed: () => setState(() {
                           _audioPlayer.playing
@@ -667,7 +697,10 @@ class _ListViewScreenState extends State<ListViewScreen> {
                         }),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.skip_next, color: Colors.white),
+                        icon: const Icon(
+                          Icons.skip_next,
+                          color: Colors.tealAccent,
+                        ),
                         onPressed: () {
                           if (_audioPlayer.hasNext) _audioPlayer.seekToNext();
                         },

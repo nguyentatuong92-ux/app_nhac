@@ -108,7 +108,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
               return const Center(
                 child: Text(
                   "Không có bài hát nào.",
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: Colors.tealAccent),
                 ),
               );
 
@@ -120,7 +120,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                   child: Text(
                     "Chọn bài hát để thêm",
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Colors.tealAccent,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -133,11 +133,11 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                       return ListTile(
                         leading: const Icon(
                           Icons.music_note,
-                          color: Colors.white70,
+                          color: Colors.tealAccent,
                         ),
                         title: Text(
                           allSongs[index].title,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Colors.tealAccent),
                           maxLines: 1,
                         ),
                         subtitle: Text(
@@ -191,13 +191,13 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
       appBar: AppBar(
         title: Text(
           widget.playlist.playlist,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Colors.tealAccent),
         ),
         backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.tealAccent),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.white, size: 28),
+            icon: const Icon(Icons.add, color: Colors.tealAccent, size: 28),
             onPressed: _openAddSongMenu,
           ),
         ],
@@ -208,7 +208,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
           ? const Center(
               child: Text(
                 'Chưa có bài hát nào trong danh sách này.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Colors.tealAccent),
               ),
             )
           : ListView.builder(
@@ -221,8 +221,8 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                   leading: Icon(
                     isPlayingThisSong ? Icons.bar_chart : Icons.music_note,
                     color: isPlayingThisSong
-                        ? Colors.greenAccent
-                        : Colors.white70,
+                        ? Colors.tealAccent
+                        : Colors.tealAccent,
                   ),
 
                   // CHỮ CHẠY TẠI DANH SÁCH PHÁT
@@ -234,8 +234,8 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                     pauseBetween: const Duration(seconds: 2),
                     style: TextStyle(
                       color: isPlayingThisSong
-                          ? Colors.greenAccent
-                          : Colors.white,
+                          ? Colors.tealAccent
+                          : Colors.tealAccent,
                       fontWeight: isPlayingThisSong
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -243,7 +243,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                   ),
                   subtitle: Text(
                     song.artist ?? "Không biết",
-                    style: const TextStyle(color: Colors.grey),
+                    style: const TextStyle(color: Colors.tealAccent),
                     maxLines: 1,
                   ),
                   trailing: IconButton(
