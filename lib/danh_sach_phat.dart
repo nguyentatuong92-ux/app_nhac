@@ -108,7 +108,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
               return const Center(
                 child: Text(
                   "Không có bài hát nào.",
-                  style: TextStyle(color: Colors.tealAccent),
+                  style: TextStyle(color: Colors.tealAccent, fontSize: 18),
                 ),
               );
 
@@ -142,7 +142,10 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                         ),
                         subtitle: Text(
                           allSongs[index].artist ?? "Không biết",
-                          style: const TextStyle(color: Colors.grey),
+                          style: const TextStyle(
+                            color: Colors.tealAccent,
+                            fontSize: 18,
+                          ),
                           maxLines: 1,
                         ),
                         onTap: () => Navigator.pop(context, allSongs[index]),
@@ -164,8 +167,11 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
         if (mounted)
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Bài hát này đã có trong danh sách!'),
-              backgroundColor: Colors.orange,
+              content: Text(
+                'Bài hát này đã có trong danh sách!',
+                style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+              ),
+              //backgroundColor: Colors.black,
             ),
           );
       } else {
@@ -177,7 +183,12 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
           setState(() => _songs.add(selectedSong));
           globalPlaylistCache[widget.playlist.id] = _songs;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Đã thêm ${selectedSong.title}')),
+            SnackBar(
+              content: Text(
+                'Đã thêm ${selectedSong.title}',
+                style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+              ),
+            ),
           );
         }
       }
@@ -219,7 +230,9 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
 
                 return ListTile(
                   leading: Icon(
-                    isPlayingThisSong ? Icons.bar_chart : Icons.music_note,
+                    isPlayingThisSong
+                        ? Icons.play_circle_outline_outlined
+                        : Icons.music_note,
                     color: isPlayingThisSong
                         ? Colors.tealAccent
                         : Colors.tealAccent,
@@ -249,7 +262,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                   trailing: IconButton(
                     icon: const Icon(
                       Icons.remove_circle_outline,
-                      color: Colors.redAccent,
+                      color: Colors.lime,
                     ),
                     onPressed: () async {
                       await widget.audioQuery.removeFromPlaylist(
@@ -261,7 +274,13 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                       if (context.mounted)
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Đã xóa khỏi danh sách'),
+                            content: Text(
+                              'Đã xóa khỏi danh sách',
+                              style: TextStyle(
+                                color: Colors.tealAccent,
+                                fontSize: 18,
+                              ),
+                            ),
                           ),
                         );
                     },
@@ -296,7 +315,15 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Lỗi phát nhạc: $e')),
+                          SnackBar(
+                            content: Text(
+                              'Lỗi phát nhạc: $e',
+                              style: TextStyle(
+                                color: Colors.tealAccent,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ),
                         );
                       }
                     }
