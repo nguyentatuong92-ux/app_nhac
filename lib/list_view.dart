@@ -1,13 +1,12 @@
 // File: lib/list_view.dart  MUSIC APP
-import 'dart:io'; // Thư viện để thao tác xóa file vật lý
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:text_scroll/text_scroll.dart'; // Thư viện chạy chữ
-import 'home_screen.dart';
-import 'danh_sach_phat.dart';
 import 'package:text_scroll/text_scroll.dart';
+import 'cap_nhat_service.dart';
+import 'danh_sach_phat.dart';
 import 'widgets/mini_player.dart';
 
 class ListViewScreen extends StatefulWidget {
@@ -26,12 +25,27 @@ class _ListViewScreenState extends State<ListViewScreen> {
 
   // BỘ NHỚ ĐEN: Ghi nhớ các bài đã xóa để chặn hiển thị lại
   final Set<int> _deletedSongIds = {};
+  bool _coBanCapNhatMoi = false;
+
+  // Hàm chạy ngầm khi mở app để kiểm tra xem có bản cập nhật không
+  Future<void> _kiemTraBanCapNhatNgam() async {
+    // Gọi hàm kiểm tra ngầm từ CapNhatService
+    bool coCapNhat = await CapNhatService.kiemTraCoBanCapNhatNgam();
+
+    // Nếu có bản cập nhật và màn hình vẫn đang hiển thị
+    if (coCapNhat && mounted) {
+      setState(() {
+        _coBanCapNhatMoi = true; // Bật chấm đỏ thông báo lên
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _checkAndRequestPermissions();
-
+    // 3. THÊM DÒNG NÀY: Gọi hàm kiểm tra ngầm khi màn hình vừa mở
+    _kiemTraBanCapNhatNgam();
     _audioPlayer.sequenceStateStream.listen((state) {
       if (state == null) return;
       final song = state.currentSource?.tag as SongModel?;
@@ -309,6 +323,28 @@ class _ListViewScreenState extends State<ListViewScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
+          leading: IconButton(
+            // Sử dụng Badge để bọc Icon lại
+            icon: Badge(
+              // isLabelVisible: true thì hiện chấm đỏ, false thì ẩn đi
+              isLabelVisible: _coBanCapNhatMoi,
+              backgroundColor: Colors.redAccent, // Màu của chấm
+              smallSize: 12, // Kích thước chấm đỏ
+              child: const Icon(Icons.add_alert, color: Colors.tealAccent),
+            ),
+            iconSize: 30,
+            onPressed: () {
+              // 1. Tắt chấm đỏ ngay khi người dùng nhấn vào
+              if (_coBanCapNhatMoi) {
+                setState(() {
+                  _coBanCapNhatMoi = false;
+                });
+              }
+
+              // 2. Vẫn giữ nguyên lệnh kiểm tra cập nhật của bạn
+              CapNhatService.kiemTra(context, showMessage: true);
+            },
+          ),
           iconTheme: const IconThemeData(color: Colors.tealAccent),
           actions: [
             IconButton(
@@ -487,14 +523,14 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                   // HIỆU ỨNG CHỮ CHẠY ĐƯỢC ÁP DỤNG TẠI ĐÂY
                                   title: TextScroll(
                                     songs[index].title,
-                                    mode: TextScrollMode
-                                        .bouncing, // Trượt qua trượt lại
+                                    mode: TextScrollMode.bouncing,
+                                    // Trượt qua trượt lại
                                     velocity: const Velocity(
                                       pixelsPerSecond: Offset(30, 0),
-                                    ), // Tốc độ trượt
-                                    delayBefore: const Duration(
-                                      seconds: 2,
-                                    ), // Nghỉ 2s trước khi trượt
+                                    ),
+                                    // Tốc độ trượt
+                                    delayBefore: const Duration(seconds: 2),
+                                    // Nghỉ 2s trước khi trượt
                                     pauseBetween: const Duration(seconds: 2),
                                     style: TextStyle(
                                       color: isPlayingThisSong

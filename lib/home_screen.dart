@@ -29,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final OnAudioQuery _audioQuery = OnAudioQuery();
   Uint8List? _artworkBytes;
   int? _currentArtworkId;
-
   // Hàm chuyển đổi Duration thành chuỗi hiển thị MM:SS
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
@@ -42,19 +41,15 @@ class _HomeScreenState extends State<HomeScreen> {
     return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
-  // ------------------------------------
-
   @override
   void initState() {
     super.initState();
     currentSong =
         widget.audioPlayer.sequenceState?.currentSource?.tag as SongModel?;
-
     // Lấy ảnh ngay khi màn hình vừa mở (nếu có bài hát)
     if (currentSong != null) {
       _fetchArtwork(currentSong!.id);
     }
-
     widget.audioPlayer.sequenceStateStream.listen((state) {
       if (state != null && mounted) {
         final newSong = state.currentSource?.tag as SongModel?;
@@ -70,22 +65,18 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.audioPlayer.playingStream.listen((playing) {
       if (mounted) setState(() => isPlaying = playing);
     });
-
     widget.audioPlayer.durationStream.listen(
       (d) => setState(() => _duration = d ?? Duration.zero),
     );
-
     widget.audioPlayer.positionStream.listen(
       (p) => setState(() => _position = p),
     );
     // 1. Tắt thanh UI âm lượng mặc định của máy
     VolumeController.instance.showSystemUI = false;
-
     // 2. Lấy âm lượng hiện tại khi vừa mở app
     VolumeController.instance.getVolume().then((volume) {
       if (mounted) setState(() => _currentVolume = volume);
     });
-
     // 3. Lắng nghe khi người dùng bấm nút cứng bên hông máy (đổi thành addListener)
     VolumeController.instance.addListener((volume) {
       if (mounted) setState(() => _currentVolume = volume);
@@ -96,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _fetchArtwork(int songId) async {
     // Tránh việc lấy lại ảnh nếu id bài hát không đổi
     if (_currentArtworkId == songId) return;
-
     try {
       final Uint8List? bytes = await _audioQuery.queryArtwork(
         songId,
@@ -114,8 +104,6 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint("Lỗi lấy ảnh bìa: $e");
     }
   }
-
-  // --------------------------------------
 
   @override
   void dispose() {

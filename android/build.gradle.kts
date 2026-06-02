@@ -26,15 +26,27 @@ subprojects {
     plugins.withId("com.android.library") {
         extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
             compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_11
-                targetCompatibility = JavaVersion.VERSION_11
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
             }
         }
     }
 
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    subprojects {
+        afterEvaluate {
+            // Khóa cứng toàn bộ mã Java của tất cả thư viện (kể cả audio_session) về 17
+            project.tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
+                sourceCompatibility = JavaVersion.VERSION_21.toString()
+                targetCompatibility = JavaVersion.VERSION_21.toString()
+            }
+
+            // Khóa cứng toàn bộ mã Kotlin của tất cả thư viện về 17
+            project.tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>()
+                .configureEach {
+                    compilerOptions {
+                        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+                    }
+                }
         }
     }
 }
