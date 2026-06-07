@@ -26,21 +26,19 @@ class MiniPlayer extends StatelessWidget {
         ),
       ).then((_) => onRefresh()),
       child: Container(
-        height: 70,
+        height:
+            75, // ĐÃ SỬA: Tăng lên 75 để rộng rãi hơn khi có thanh tiến trình
         margin: const EdgeInsets.all(8.0),
         decoration: BoxDecoration(
           color: const Color(0xFF2A2A3A),
           borderRadius: BorderRadius.circular(35),
         ),
-        // ĐÃ THAY ĐỔI: Chuyển Row thành Column để chứa thêm thanh tiến trình ở dưới
         child: Column(
           children: [
-            // Phần 1: Nội dung chính của Mini-Player (Ảnh bìa, Tên bài, Nút bấm)
             Expanded(
               child: Row(
                 children: [
                   const SizedBox(width: 10),
-                  // Ảnh bìa thu nhỏ có dạng hình tròn
                   Container(
                     width: 46,
                     height: 46,
@@ -128,7 +126,6 @@ class MiniPlayer extends StatelessWidget {
               ),
             ),
 
-            // Phần 2: Thanh tiến trình mỏng nằm sát mép dưới
             StreamBuilder<Duration>(
               stream: audioPlayer.positionStream,
               builder: (context, snapshot) {
@@ -150,7 +147,7 @@ class MiniPlayer extends StatelessWidget {
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       Colors.tealAccent,
                     ),
-                    minHeight: 3, // Độ dày của thanh
+                    minHeight: 3,
                   ),
                 );
               },

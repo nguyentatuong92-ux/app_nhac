@@ -1,9 +1,10 @@
-// File: lib/danh_sach_phat.dart
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import 'package:text_scroll/text_scroll.dart'; // Thêm chữ chạy
+import 'package:text_scroll/text_scroll.dart';
 import 'home_screen.dart';
+import 'chon_nhieu_bai_hat.dart'; // Đã chèn import màn hình chọn nhiều bài
+import 'package:just_audio_background/just_audio_background.dart';
 
 final Map<int, List<SongModel>> globalPlaylistCache = {};
 
@@ -87,110 +88,34 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
     }
   }
 
+  // ĐÃ CẬP NHẬT: Hàm mở màn hình chọn nhiều bài hát
   Future<void> _openAddSongMenu() async {
-    SongModel? selectedSong = await showModalBottomSheet<SongModel>(
-      context: context,
-      backgroundColor: const Color(0xFF2A2A3A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChonNhieuBaiHatScreen(
+          playlist: widget.playlist,
+          audioQuery: widget.audioQuery,
+        ),
       ),
-      builder: (BuildContext context) {
-        return FutureBuilder<List<SongModel>>(
-          future: widget.audioQuery.querySongs(
-            ignoreCase: true,
-            orderType: OrderType.ASC_OR_SMALLER,
-            uriType: UriType.EXTERNAL,
-          ),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting)
-              return const Center(child: CircularProgressIndicator());
-            if (snapshot.data == null || snapshot.data!.isEmpty)
-              return const Center(
-                child: Text(
-                  "Không có bài hát nào.",
-                  style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-                ),
-              );
-
-            List<SongModel> allSongs = snapshot.data!;
-            return Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Text(
-                    "Chọn bài hát để thêm",
-                    style: TextStyle(
-                      color: Colors.tealAccent,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: allSongs.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: const Icon(
-                          Icons.music_note,
-                          color: Colors.tealAccent,
-                        ),
-                        title: Text(
-                          allSongs[index].title,
-                          style: const TextStyle(color: Colors.tealAccent),
-                          maxLines: 1,
-                        ),
-                        subtitle: Text(
-                          allSongs[index].artist ?? "Không biết",
-                          style: const TextStyle(
-                            color: Colors.tealAccent,
-                            fontSize: 18,
-                          ),
-                          maxLines: 1,
-                        ),
-                        onTap: () => Navigator.pop(context, allSongs[index]),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          },
-        );
-      },
     );
 
-    if (selectedSong != null) {
-      bool isExist = _songs.any((s) => s.data == selectedSong.data);
+    if (result == true) {
+      // THÊM DÒNG NÀY: Xóa bộ nhớ đệm (cache) cũ của danh sách phát này
+      globalPlaylistCache.remove(widget.playlist.id);
 
-      if (isExist) {
-        if (mounted)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Bài hát này đã có trong danh sách!',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-              ),
-              //backgroundColor: Colors.black,
+      // Gọi lại hàm load danh sách để ép ứng dụng tải dữ liệu mới nhất
+      await _loadSongs();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Đã thêm các bài hát vào danh sách!',
+              style: TextStyle(color: Colors.tealAccent, fontSize: 18),
             ),
-          );
-      } else {
-        await widget.audioQuery.addToPlaylist(
-          widget.playlist.id,
-          selectedSong.id,
+          ),
         );
-        if (mounted) {
-          setState(() => _songs.add(selectedSong));
-          globalPlaylistCache[widget.playlist.id] = _songs;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Đã thêm ${selectedSong.title}',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-              ),
-            ),
-          );
-        }
       }
     }
   }
@@ -209,7 +134,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: Colors.tealAccent, size: 28),
-            onPressed: _openAddSongMenu,
+            onPressed: _openAddSongMenu, // Gọi hàm mở màn hình
           ),
         ],
       ),
@@ -237,8 +162,6 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                         ? Colors.tealAccent
                         : Colors.tealAccent,
                   ),
-
-                  // CHỮ CHẠY TẠI DANH SÁCH PHÁT
                   title: TextScroll(
                     song.title,
                     mode: TextScrollMode.bouncing,
@@ -271,7 +194,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                       );
                       setState(() => _songs.removeAt(index));
                       globalPlaylistCache[widget.playlist.id] = _songs;
-                      if (context.mounted)
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text(
@@ -283,6 +206,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                             ),
                           ),
                         );
+                      }
                     },
                   ),
                   onTap: () async {
@@ -293,7 +217,24 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                               ? s.data
                               : (s.uri ??
                                     'content://media/external/audio/media/${s.id}');
-                          return AudioSource.uri(Uri.parse(uri), tag: s);
+
+                          return AudioSource.uri(
+                            Uri.parse(uri),
+                            // ĐÃ SỬA: Chuyển đổi sang MediaItem để đồng bộ với toàn hệ thống
+                            tag: MediaItem(
+                              id: s.id.toString(),
+                              title: s.title,
+                              artist: s.artist ?? "Không biết",
+                              // Cấp luôn đường dẫn ảnh để bảng thông báo lên màu đẹp
+                              artUri: s.albumId != null
+                                  ? Uri.parse(
+                                      'content://media/external/audio/albumart/${s.albumId}',
+                                    )
+                                  : Uri.parse(
+                                      'asset:///assets/icon/music-notes-bg.jpg',
+                                    ),
+                            ),
+                          );
                         }).toList(),
                       );
 
@@ -318,7 +259,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                           SnackBar(
                             content: Text(
                               'Lỗi phát nhạc: $e',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 color: Colors.tealAccent,
                                 fontSize: 18,
                               ),

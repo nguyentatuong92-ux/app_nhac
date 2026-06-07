@@ -1,4 +1,4 @@
-// File: lib/list_view.dart  MUSIC APP
+// List_view.dart  trang chính
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -8,6 +8,8 @@ import 'package:text_scroll/text_scroll.dart';
 import 'cap_nhat_service.dart';
 import 'danh_sach_phat.dart';
 import 'widgets/mini_player.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'package:flutter/foundation.dart';
 
 class ListViewScreen extends StatefulWidget {
   const ListViewScreen({super.key});
@@ -23,35 +25,51 @@ class _ListViewScreenState extends State<ListViewScreen> {
   bool _hasPermission = false;
   SongModel? currentlyPlaying;
 
-  // BỘ NHỚ ĐEN: Ghi nhớ các bài đã xóa để chặn hiển thị lại
   final Set<int> _deletedSongIds = {};
   bool _coBanCapNhatMoi = false;
 
-  // Hàm chạy ngầm khi mở app để kiểm tra xem có bản cập nhật không
-  Future<void> _kiemTraBanCapNhatNgam() async {
-    // Gọi hàm kiểm tra ngầm từ CapNhatService
-    bool coCapNhat = await CapNhatService.kiemTraCoBanCapNhatNgam();
+  List<SongModel> _danhSachDangPhat = [];
 
-    // Nếu có bản cập nhật và màn hình vẫn đang hiển thị
+  Future<void> _kiemTraBanCapNhatNgam() async {
+    bool coCapNhat = await CapNhatService.kiemTraCoBanCapNhatNgam();
     if (coCapNhat && mounted) {
       setState(() {
-        _coBanCapNhatMoi = true; // Bật chấm đỏ thông báo lên
+        _coBanCapNhatMoi = true;
       });
+    }
+  }
+
+  // HÀM MỚI: Tự động kiểm tra quyền khi mở app
+  Future<void> _kiemTraQuyenDaCap() async {
+    // Kiểm tra trạng thái quyền Audio (dành cho Android 13+)
+    bool audioGranted = await Permission.audio.isGranted;
+    // Kiểm tra trạng thái quyền Storage (dành cho Android 12 trở xuống)
+    bool storageGranted = await Permission.storage.isGranted;
+
+    // Nếu hệ thống xác nhận đã cấp quyền từ lần mở app trước
+    if (audioGranted || storageGranted) {
+      if (mounted) {
+        setState(() {
+          _hasPermission = true; // Bật cờ cho phép vào thẳng danh sách nhạc
+        });
+      }
     }
   }
 
   @override
   void initState() {
     super.initState();
-    _checkAndRequestPermissions();
-    // 3. THÊM DÒNG NÀY: Gọi hàm kiểm tra ngầm khi màn hình vừa mở
-    _kiemTraBanCapNhatNgam();
-    _audioPlayer.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      final song = state.currentSource?.tag as SongModel?;
-      if (mounted && song != currentlyPlaying) {
+    _kiemTraQuyenDaCap();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _kiemTraBanCapNhatNgam();
+    });
+
+    // ĐÃ SỬA: Xóa bỏ đoạn mã bị lặp lại, chỉ giữ lại 1 lần lắng nghe
+    _audioPlayer.currentIndexStream.listen((index) {
+      if (index == null || _danhSachDangPhat.isEmpty) return;
+      if (mounted) {
         setState(() {
-          currentlyPlaying = song;
+          currentlyPlaying = _danhSachDangPhat[index];
         });
       }
     });
@@ -64,32 +82,34 @@ class _ListViewScreenState extends State<ListViewScreen> {
   }
 
   Future<void> _checkAndRequestPermissions() async {
-    // 1. Xin quyền đọc Audio (Dành cho Android 13+)
-    await Permission.audio.request();
+    try {
+      await Permission.audio.request();
+      debugPrint("Đã xử lý xong quyền Audio");
+    } catch (e) {
+      debugPrint("Lỗi khi xin quyền Audio: $e");
+    }
 
-    // 2. Xin quyền Storage thường (Dành cho Android 10 trở xuống)
-    await Permission.storage.request();
+    try {
+      await Permission.storage.request();
+      debugPrint("Đã xử lý xong quyền Storage");
+    } catch (e) {
+      debugPrint("Lỗi khi xin quyền Storage: $e");
+    }
 
-    // 3. Xin quyền QUẢN LÝ TẤT CẢ FILE (BẮT BUỘC để xóa nhạc trên Android 11+)
-    var manageStatus = await Permission.manageExternalStorage.request();
+    try {
+      await Permission.manageExternalStorage.request();
+      debugPrint("Đã xử lý xong quyền Manage Storage");
+    } catch (e) {
+      debugPrint("Lỗi khi xin quyền Manage Storage: $e");
+    }
 
-    // Kiểm tra xem người dùng đã cấp quyền chưa
-    if (await Permission.audio.isGranted ||
-        await Permission.storage.isGranted ||
-        manageStatus.isGranted) {
-      setState(() => _hasPermission = true);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng cấp quyền để ứng dụng hoạt động!'),
-          ),
-        );
-      }
+    if (mounted) {
+      setState(() {
+        _hasPermission = true;
+      });
     }
   }
 
-  // Bảng hiển thị thêm vào danh sách phát
   void _showAddToPlaylistBottomSheet(SongModel song) {
     showModalBottomSheet(
       context: context,
@@ -101,12 +121,13 @@ class _ListViewScreenState extends State<ListViewScreen> {
         return FutureBuilder<List<PlaylistModel>>(
           future: _audioQuery.queryPlaylists(),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting)
+            if (snapshot.connectionState == ConnectionState.waiting) {
               return const SizedBox(
                 height: 100,
                 child: Center(child: CircularProgressIndicator()),
               );
-            if (snapshot.data == null || snapshot.data!.isEmpty)
+            }
+            if (snapshot.data == null || snapshot.data!.isEmpty) {
               return const SizedBox(
                 height: 100,
                 child: Center(
@@ -116,6 +137,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   ),
                 ),
               );
+            }
 
             List<PlaylistModel> playlists = snapshot.data!;
             return ListView.builder(
@@ -143,7 +165,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                         SnackBar(
                           content: Text(
                             'Đã thêm vào ${playlists[index].playlist}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.tealAccent,
                               fontSize: 20,
                             ),
@@ -162,7 +184,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
     );
   }
 
-  // Hộp thoại xác nhận xóa bài hát
   void _showDeleteConfirmDialog(SongModel song) {
     showDialog(
       context: context,
@@ -187,28 +208,19 @@ class _ListViewScreenState extends State<ListViewScreen> {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.pop(context); // Đóng hộp thoại
-
+                Navigator.pop(context);
                 try {
-                  // Kiểm tra xem đường dẫn có hợp lệ không
                   if (song.data.isNotEmpty) {
-                    // 1. Yêu cầu quyền quản lý tệp (Rất quan trọng trên Android 11+)
                     if (await Permission.manageExternalStorage
                         .request()
                         .isGranted) {
                       final file = File(song.data);
-
-                      // 2. Kiểm tra file tồn tại rồi mới xóa
                       if (await file.exists()) {
                         await file.delete();
                         print("Đã xóa file vật lý thành công!");
-
-                        // Cập nhật giao diện: Thêm ID bài hát vào danh sách đen
                         setState(() {
                           _deletedSongIds.add(song.id);
                         });
-
-                        // Thông báo cho người dùng
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -229,7 +241,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
                       }
                     } else {
                       print("Lỗi: Người dùng từ chối cấp quyền quản lý tệp.");
-                      // Bạn có thể thêm code hiển thị SnackBar báo lỗi cho người dùng ở đây
                     }
                   }
                 } catch (e) {
@@ -324,24 +335,19 @@ class _ListViewScreenState extends State<ListViewScreen> {
             ),
           ),
           leading: IconButton(
-            // Sử dụng Badge để bọc Icon lại
             icon: Badge(
-              // isLabelVisible: true thì hiện chấm đỏ, false thì ẩn đi
               isLabelVisible: _coBanCapNhatMoi,
-              backgroundColor: Colors.redAccent, // Màu của chấm
-              smallSize: 12, // Kích thước chấm đỏ
+              backgroundColor: Colors.redAccent,
+              smallSize: 12,
               child: const Icon(Icons.add_alert, color: Colors.tealAccent),
             ),
             iconSize: 30,
             onPressed: () {
-              // 1. Tắt chấm đỏ ngay khi người dùng nhấn vào
               if (_coBanCapNhatMoi) {
                 setState(() {
                   _coBanCapNhatMoi = false;
                 });
               }
-
-              // 2. Vẫn giữ nguyên lệnh kiểm tra cập nhật của bạn
               CapNhatService.kiemTra(context, showMessage: true);
             },
           ),
@@ -349,12 +355,9 @@ class _ListViewScreenState extends State<ListViewScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh, color: Colors.tealAccent),
-              tooltip: 'Làm mới danh sách', // Hiển thị chữ khi nhấn giữ
+              tooltip: 'Làm mới danh sách',
               onPressed: () {
-                // Chỉ cần gọi setState, FutureBuilder sẽ tự động chạy lại
-                // lệnh _audioQuery.querySongs() để lấy danh sách mới nhất.
                 setState(() {});
-
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
@@ -377,10 +380,46 @@ class _ListViewScreenState extends State<ListViewScreen> {
           ),
         ),
         body: !_hasPermission
-            ? const Center(
-                child: Text(
-                  'Đang chờ cấp quyền...',
-                  style: TextStyle(color: Colors.tealAccent),
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.folder_special,
+                      size: 80,
+                      color: Colors.tealAccent,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Ứng dụng cần quyền đọc file\nđể tải danh sách bài hát.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.tealAccent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 30,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onPressed: () {
+                        _checkAndRequestPermissions();
+                      },
+                      child: const Text(
+                        'BẤM VÀO ĐÂY ĐỂ CẤP QUYỀN',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               )
             : TabBarView(
@@ -424,30 +463,33 @@ class _ListViewScreenState extends State<ListViewScreen> {
                             uriType: UriType.EXTERNAL,
                           ),
                           builder: (context, item) {
-                            if (item.connectionState == ConnectionState.waiting)
+                            if (item.connectionState ==
+                                ConnectionState.waiting) {
                               return const Center(
                                 child: CircularProgressIndicator(),
                               );
-                            if (item.data == null || item.data!.isEmpty)
+                            }
+                            if (item.data == null || item.data!.isEmpty) {
                               return const Center(
                                 child: Text(
                                   'Không tìm thấy bài hát.',
                                   style: TextStyle(color: Colors.tealAccent),
                                 ),
                               );
+                            }
 
-                            // Lọc các bài hát đã bị xóa để không hiển thị lại
                             List<SongModel> songs = item.data!
                                 .where((s) => !_deletedSongIds.contains(s.id))
                                 .toList();
 
-                            if (songs.isEmpty)
+                            if (songs.isEmpty) {
                               return const Center(
                                 child: Text(
                                   'Không có bài hát nào.',
                                   style: TextStyle(color: Colors.tealAccent),
                                 ),
                               );
+                            }
 
                             return ListView.separated(
                               itemCount: songs.length,
@@ -467,7 +509,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                     height: 50,
                                     child: Stack(
                                       children: [
-                                        // 1. Lớp dưới cùng: Hiển thị ảnh bìa bài hát
                                         QueryArtworkWidget(
                                           id: songs[index].id,
                                           type: ArtworkType.AUDIO,
@@ -475,7 +516,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                             8,
                                           ),
                                           artworkFit: BoxFit.cover,
-                                          // Nếu bài hát không có ảnh bìa, hiển thị nền xám đen
                                           nullArtworkWidget: Container(
                                             width: 50,
                                             height: 50,
@@ -491,8 +531,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                             ),
                                           ),
                                         ),
-
-                                        // 2. Lớp bên trên: Hiển thị icon Play nếu đang phát bài này
                                         if (isPlayingThisSong)
                                           Container(
                                             width: 50,
@@ -500,7 +538,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                             decoration: BoxDecoration(
                                               color: Colors.black.withOpacity(
                                                 0.5,
-                                              ), // Lớp mờ đen đè lên ảnh
+                                              ),
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
@@ -520,17 +558,13 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                       ],
                                     ),
                                   ),
-                                  // HIỆU ỨNG CHỮ CHẠY ĐƯỢC ÁP DỤNG TẠI ĐÂY
                                   title: TextScroll(
                                     songs[index].title,
                                     mode: TextScrollMode.bouncing,
-                                    // Trượt qua trượt lại
                                     velocity: const Velocity(
                                       pixelsPerSecond: Offset(30, 0),
                                     ),
-                                    // Tốc độ trượt
                                     delayBefore: const Duration(seconds: 2),
-                                    // Nghỉ 2s trước khi trượt
                                     pauseBetween: const Duration(seconds: 2),
                                     style: TextStyle(
                                       color: isPlayingThisSong
@@ -549,8 +583,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-
-                                  // MENU 3 CHẤM CÓ TÍNH NĂNG XÓA
                                   trailing: PopupMenuButton<int>(
                                     icon: const Icon(
                                       Icons.more_vert,
@@ -589,22 +621,33 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                       ),
                                     ],
                                   ),
-
                                   onTap: () async {
                                     try {
-                                      final playlistSource =
-                                          ConcatenatingAudioSource(
-                                            children: songs.map((s) {
-                                              String uri = s.data.isNotEmpty
-                                                  ? s.data
-                                                  : (s.uri ??
-                                                        'content://media/external/audio/media/${s.id}');
-                                              return AudioSource.uri(
-                                                Uri.parse(uri),
-                                                tag: s,
-                                              );
-                                            }).toList(),
+                                      _danhSachDangPhat = songs;
+
+                                      final playlistSource = ConcatenatingAudioSource(
+                                        children: songs.map((s) {
+                                          String uri = s.data.isNotEmpty
+                                              ? s.data
+                                              : (s.uri ??
+                                                    'content://media/external/audio/media/${s.id}');
+                                          return AudioSource.uri(
+                                            Uri.parse(uri),
+                                            tag: MediaItem(
+                                              id: s.id.toString(),
+                                              title: s.title,
+                                              artist: s.artist ?? "Không biết",
+                                              artUri: s.albumId != null
+                                                  ? Uri.parse(
+                                                      'content://media/external/audio/albumart/${s.albumId}',
+                                                    )
+                                                  : Uri.parse(
+                                                      'asset:///assets/icon/music-notes-bg.png',
+                                                    ),
+                                            ),
                                           );
+                                        }).toList(),
+                                      );
 
                                       await _audioPlayer.setAudioSource(
                                         playlistSource,
@@ -647,11 +690,13 @@ class _ListViewScreenState extends State<ListViewScreen> {
                         child: FutureBuilder<List<PlaylistModel>>(
                           future: _audioQuery.queryPlaylists(),
                           builder: (context, item) {
-                            if (item.connectionState == ConnectionState.waiting)
+                            if (item.connectionState ==
+                                ConnectionState.waiting) {
                               return const Center(
                                 child: CircularProgressIndicator(),
                               );
-                            if (item.data == null || item.data!.isEmpty)
+                            }
+                            if (item.data == null || item.data!.isEmpty) {
                               return const Center(
                                 child: Text(
                                   'Chưa có danh sách phát.',
@@ -661,6 +706,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                   ),
                                 ),
                               );
+                            }
 
                             List<PlaylistModel> playlists = item.data!;
                             return ListView.builder(
@@ -734,10 +780,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   ),
                 ],
               ),
-
         bottomNavigationBar: currentlyPlaying != null
             ? SafeArea(
-                // Bọc SafeArea để chống tràn viền dưới trên S25 Plus
                 child: MiniPlayer(
                   currentSong: currentlyPlaying!,
                   audioPlayer: _audioPlayer,
@@ -745,7 +789,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                 ),
               )
             : const SizedBox.shrink(),
-      ), // <-- Dấu ngoặc đóng Scaffold (bạn đang bị thiếu dấu này)
-    ); // <-- Dấu ngoặc đóng DefaultTabController
+      ),
+    );
   }
 }

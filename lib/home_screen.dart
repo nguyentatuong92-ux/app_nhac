@@ -1,8 +1,8 @@
-// trang chủ
 import 'dart:async';
-import 'dart:typed_data'; // Đã thêm import này để dùng Uint8List
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart'; // Đã thêm để nhận diện MediaItem
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
 import 'package:volume_controller/volume_controller.dart';
@@ -21,15 +21,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Duration _duration = Duration.zero;
   Duration _position = Duration.zero;
   bool _showVolumeSlider = false;
-  SongModel? currentSong;
+
+  // SỬA LỖI: Đổi SongModel thành MediaItem
+  MediaItem? currentItem;
   Timer? _sleepTimer;
 
-  double _currentVolume = 0.5; // Biến mới để lưu âm lượng thật của máy
-  // --- CÁC BIẾN MỚI ĐỂ XỬ LÝ ẢNH BÌA ---
+  double _currentVolume = 0.5;
   final OnAudioQuery _audioQuery = OnAudioQuery();
   Uint8List? _artworkBytes;
   int? _currentArtworkId;
-  // Hàm chuyển đổi Duration thành chuỗi hiển thị MM:SS
+
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
@@ -44,20 +45,21 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    currentSong =
-        widget.audioPlayer.sequenceState?.currentSource?.tag as SongModel?;
-    // Lấy ảnh ngay khi màn hình vừa mở (nếu có bài hát)
-    if (currentSong != null) {
-      _fetchArtwork(currentSong!.id);
+
+    // SỬA LỖI: Lấy dữ liệu dưới dạng MediaItem thay vì SongModel
+    currentItem =
+        widget.audioPlayer.sequenceState?.currentSource?.tag as MediaItem?;
+    if (currentItem != null) {
+      // Vì id của MediaItem là dạng String, ta cần chuyển thành int để lấy ảnh bìa
+      _fetchArtwork(int.parse(currentItem!.id));
     }
+
     widget.audioPlayer.sequenceStateStream.listen((state) {
       if (state != null && mounted) {
-        final newSong = state.currentSource?.tag as SongModel?;
-        setState(() => currentSong = newSong);
-
-        // Cập nhật lại ảnh khi chuyển bài hát mới
-        if (newSong != null) {
-          _fetchArtwork(newSong.id);
+        final newItem = state.currentSource?.tag as MediaItem?;
+        setState(() => currentItem = newItem);
+        if (newItem != null) {
+          _fetchArtwork(int.parse(newItem.id));
         }
       }
     });
@@ -71,27 +73,23 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.audioPlayer.positionStream.listen(
       (p) => setState(() => _position = p),
     );
-    // 1. Tắt thanh UI âm lượng mặc định của máy
+
     VolumeController.instance.showSystemUI = false;
-    // 2. Lấy âm lượng hiện tại khi vừa mở app
     VolumeController.instance.getVolume().then((volume) {
       if (mounted) setState(() => _currentVolume = volume);
     });
-    // 3. Lắng nghe khi người dùng bấm nút cứng bên hông máy (đổi thành addListener)
     VolumeController.instance.addListener((volume) {
       if (mounted) setState(() => _currentVolume = volume);
     });
   }
 
-  // --- HÀM TỰ LẤY ẢNH VÀ LƯU VÀO BIẾN ---
   Future<void> _fetchArtwork(int songId) async {
-    // Tránh việc lấy lại ảnh nếu id bài hát không đổi
     if (_currentArtworkId == songId) return;
     try {
       final Uint8List? bytes = await _audioQuery.queryArtwork(
         songId,
         ArtworkType.AUDIO,
-        size: 500, // Tăng chất lượng ảnh lên một chút (tùy chọn)
+        size: 500,
       );
 
       if (mounted) {
@@ -187,7 +185,6 @@ class _HomeScreenState extends State<HomeScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (c) => SafeArea(
-        // <--- BỌC THÊM SAFEAREA VÀO ĐÂY NỮA
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10.0),
           child: Column(
@@ -277,18 +274,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lấy kích thước màn hình hiện tại của điện thoại
     final screenWidth = MediaQuery.of(context).size.width;
-    // Đặt kích thước đĩa nhạc bằng 75% chiều rộng màn hình (tối đa 350 để không quá to trên tablet)
     final double artworkSize = (screenWidth * 0.75).clamp(200.0, 350.0);
 
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-
         title: const Text(
-          'Nguyễn Tá Tưởng',
+          'Tá Tưởng',
           style: TextStyle(
             color: Colors.tealAccent,
             fontSize: 22,
@@ -320,7 +314,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        // <--- BỌC THÊM SAFEAREA Ở ĐÂY
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
@@ -332,31 +325,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: _currentVolume,
                   onChanged: (v) {
                     setState(() => _currentVolume = v);
-                    // Gọi lệnh setVolume của phiên bản mới
                     VolumeController.instance.setVolume(v);
                   },
                 ),
               const Spacer(),
 
-              // ---  ẢNH BÌA BÀI HÁT ---
               Container(
-                width: 300,
-                height: 300,
+                width: artworkSize,
+                height: artworkSize,
                 decoration: BoxDecoration(
                   color: Colors.grey[800],
-                  borderRadius: BorderRadius.circular(1000), // Bo tròn viền
+                  borderRadius: BorderRadius.circular(artworkSize / 2),
                   border: Border.all(color: Colors.tealAccent, width: 3),
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(1000),
-                  child: (_artworkBytes != null)
+                  borderRadius: BorderRadius.circular(artworkSize / 2),
+                  child: (_artworkBytes != null && _artworkBytes!.isNotEmpty)
                       ? Image.memory(
                           _artworkBytes!,
-                          width: 300,
-                          height: 300,
+                          width: artworkSize,
+                          height: artworkSize,
                           fit: BoxFit.cover,
-                          gaplessPlayback:
-                              true, // Giữ ảnh mượt khi Widget rebuild, ngăn chớp nháy
+                          gaplessPlayback: true,
                         )
                       : const Icon(
                           Icons.music_note,
@@ -366,21 +356,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // ---------------------------
               const SizedBox(height: 20),
+              // Cập nhật lấy tên bài hát từ biến currentItem
               TextScroll(
-                currentSong?.title ?? "Đang phát",
+                currentItem?.title ?? "Đang phát",
                 style: const TextStyle(color: Colors.tealAccent, fontSize: 24),
               ),
               const Spacer(),
-              // thanh tiến trình theo thời gian thực
+
               Column(
                 children: [
                   Slider(
                     activeColor: Colors.tealAccent,
-                    // Đổi màu thanh trượt cho tone-sur-tone
                     inactiveColor: Colors.grey[800],
-                    // Màu phần chưa chạy tới
                     value: _position.inSeconds.toDouble().clamp(
                       0.0,
                       _duration.inSeconds.toDouble(),
@@ -389,11 +377,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     onChanged: (v) =>
                         widget.audioPlayer.seek(Duration(seconds: v.toInt())),
                   ),
-                  // Hàng chứa 2 mốc thời gian
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                    ), // Căn lề cho khớp với thanh trượt
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -423,14 +408,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(
                       Icons.skip_previous,
                       size: 50,
-                      color: (Colors.tealAccent),
+                      color: Colors.tealAccent,
                     ),
                     onPressed: () => widget.audioPlayer.seekToPrevious(),
                   ),
                   IconButton(
                     icon: Icon(
                       isPlaying ? Icons.pause_circle : Icons.play_circle,
-                      color: (Colors.tealAccent),
+                      color: Colors.tealAccent,
                       size: 70,
                     ),
                     onPressed: () => isPlaying
@@ -441,7 +426,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(
                       Icons.skip_next,
                       size: 50,
-                      color: (Colors.tealAccent),
+                      color: Colors.tealAccent,
                     ),
                     onPressed: () => widget.audioPlayer.seekToNext(),
                   ),

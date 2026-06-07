@@ -1,8 +1,20 @@
 // File: lib/main.dart
 import 'package:flutter/material.dart';
-import 'list_view.dart'; // Đổi thành gọi file list_view.dart
+import 'package:just_audio_background/just_audio_background.dart'; // 1. Import thư viện chạy ngầm
+import 'list_view.dart';
 
-void main() {
+// 2. Chuyển hàm main thành bất đồng bộ (async)
+Future<void> main() async {
+  // 3. Đảm bảo các widget của Flutter được khởi tạo trước khi gọi Native code
+  WidgetsFlutterBinding.ensureInitialized();
+  // Mở khóa đoạn code này và sửa lại dòng androidNotificationIcon
+  await JustAudioBackground.init(
+    androidNotificationChannelId: 'com.example.app_nhac.channel.audio',
+    androidNotificationChannelName: 'Phát nhạc',
+    androidNotificationOngoing: true,
+    // Cập nhật trỏ tới file ảnh trong thư mục drawable (không cần ghi đuôi .png)
+    androidNotificationIcon: 'mipmap/launcher_icon',
+  );
   runApp(const MyApp());
 }
 

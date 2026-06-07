@@ -44,9 +44,16 @@ class CapNhatService {
     try {
       if (showMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             backgroundColor: Color(0xFF64B5F6),
-            content: Text(
+            behavior: SnackBarBehavior.floating,
+            // Giúp SnackBar nổi lên khỏi viền dưới
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                15.0,
+              ), // Điều chỉnh độ bo góc tại đây
+            ),
+            content: const Text(
               "Đang kiểm tra cập nhật...",
               style: TextStyle(fontSize: 18),
             ),
@@ -91,9 +98,15 @@ class CapNhatService {
           }
         } else if (showMessage && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              backgroundColor: Color(0xFF64B5F6),
-              content: Text(
+            SnackBar(
+              backgroundColor: const Color(0xFF64B5F6),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                  15.0,
+                ), // Điều chỉnh độ bo góc tại đây
+              ),
+              content: const Text(
                 "Bạn đang dùng phiên bản mới nhất!",
                 style: TextStyle(fontSize: 18),
               ),
@@ -107,7 +120,7 @@ class CapNhatService {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Color(0xFF64B5F6),
-            content: Text(
+            content: const Text(
               "Không thể kiểm tra cập nhật lúc này.",
               style: TextStyle(fontSize: 18),
             ),
@@ -262,8 +275,16 @@ class CapNhatService {
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Lỗi tải xuống! Vui lòng kiểm tra lại mạng."),
+          SnackBar(
+            backgroundColor: const Color(0xFF64B5F6),
+            behavior: SnackBarBehavior.floating,
+            // Giúp SnackBar nổi lên khỏi viền dưới
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                15.0,
+              ), // Điều chỉnh độ bo góc tại đây
+            ),
+            content: const Text("Lỗi tải xuống! Vui lòng kiểm tra lại mạng."),
           ),
         );
       }
