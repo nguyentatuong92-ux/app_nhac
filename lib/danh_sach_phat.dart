@@ -31,22 +31,55 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
   bool _isLoading = true;
   SongModel? _currentlyPlaying;
 
+  // Hàm này giúp cập nhật bài hát đang phát một cách an toàn
+  // bằng cách kiểm tra linh hoạt kiểu dữ liệu của biến tag
+  void _updateCurrentlyPlaying(dynamic tag) {
+    if (tag == null) return;
+
+    // Trường hợp 1: Nếu tag trả về đúng là SongModel
+    if (tag is SongModel) {
+      if (mounted && _currentlyPlaying?.id != tag.id) {
+        setState(() {
+          _currentlyPlaying = tag;
+        });
+      }
+    }
+    // Trường hợp 2: Nếu tag bị chuyển thành kiểu khác (thường là MediaItem)
+    else {
+      // Vì MediaItem.id thường là dạng String, ta cần chuyển nó về int
+      // để có thể so sánh với id của SongModel
+      final songIdString = tag.id.toString();
+      final songId = int.tryParse(songIdString);
+
+      if (songId != null && mounted && _currentlyPlaying?.id != songId) {
+        try {
+          // Tìm bài hát trong danh sách _songs dựa vào ID
+          final song = _songs.firstWhere((s) => s.id == songId);
+          setState(() {
+            _currentlyPlaying = song;
+          });
+        } catch (e) {
+          // Bỏ qua nếu không tìm thấy bài hát trong danh sách này
+          debugPrint("Không tìm thấy bài hát trong danh sách: $e");
+        }
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadSongs();
 
-    _currentlyPlaying =
-        widget.audioPlayer.sequenceState?.currentSource?.tag as SongModel?;
+    // 1. Cập nhật trạng thái bài hát đang phát ngay khi mở màn hình
+    _updateCurrentlyPlaying(
+      widget.audioPlayer.sequenceState?.currentSource?.tag,
+    );
 
+    // 2. Lắng nghe luồng dữ liệu liên tục để cập nhật UI khi bài hát chuyển sang bài mới
     widget.audioPlayer.sequenceStateStream.listen((state) {
       if (state == null) return;
-      final song = state.currentSource?.tag as SongModel?;
-      if (mounted && song?.id != _currentlyPlaying?.id) {
-        setState(() {
-          _currentlyPlaying = song;
-        });
-      }
+      _updateCurrentlyPlaying(state.currentSource?.tag);
     });
   }
 
