@@ -22,6 +22,41 @@ class _ListViewScreenState extends State<ListViewScreen> {
   final OnAudioQuery _audioQuery = OnAudioQuery();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
+  // HÀM MỚI: Tính tổng thời gian của một danh sách phát
+  Future<String> _getPlaylistTotalDuration(int playlistId) async {
+    try {
+      // Lấy tất cả bài hát trong danh sách phát này
+      List<SongModel> songs = await _audioQuery.queryAudiosFrom(
+        AudiosFromType.PLAYLIST,
+        playlistId,
+      );
+
+      // Cộng dồn thời gian (mili-giây)
+      int totalMilliseconds = 0;
+      for (var song in songs) {
+        totalMilliseconds += (song.duration ?? 0);
+      }
+
+      // Nếu danh sách trống thì không hiển thị thời gian
+      if (totalMilliseconds == 0) return "";
+
+      // Chuyển đổi sang phút và giây
+      Duration duration = Duration(milliseconds: totalMilliseconds);
+      int hours = duration.inHours;
+      int minutes = duration.inMinutes % 60;
+      int seconds = duration.inSeconds % 60;
+
+      // Định dạng chuỗi hiển thị
+      if (hours > 0) {
+        return " • ${hours}g ${minutes}p";
+      } else {
+        return " • ${minutes}p ${seconds}s";
+      }
+    } catch (e) {
+      return ""; // Nếu có lỗi thì không hiển thị gì cả
+    }
+  }
+
   bool _hasPermission = false;
   SongModel? currentlyPlaying;
 
@@ -242,10 +277,19 @@ class _ListViewScreenState extends State<ListViewScreen> {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
+                          backgroundColor: Color(0xFF64B5F6),
+                          behavior: SnackBarBehavior.floating,
+                          // Giúp SnackBar nổi lên khỏi viền dưới
+                          shape: RoundedRectangleBorder(
+                            // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(15.0),
+                            ),
+                          ),
                           content: Text(
                             'Đã thêm vào ${playlists[index].playlist}',
                             style: const TextStyle(
-                              color: Colors.tealAccent,
+                              color: Colors.black,
                               fontSize: 20,
                             ),
                           ),
@@ -302,10 +346,19 @@ class _ListViewScreenState extends State<ListViewScreen> {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
+                              backgroundColor: Color(0xFF64B5F6),
+                              behavior: SnackBarBehavior.floating,
+                              // Giúp SnackBar nổi lên khỏi viền dưới
+                              shape: RoundedRectangleBorder(
+                                // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(15.0),
+                                ),
+                              ),
                               content: Text(
                                 'Đã xóa bài hát khỏi thiết bị !',
                                 style: TextStyle(
-                                  color: Colors.tealAccent,
+                                  color: Colors.black,
                                   fontSize: 20,
                                 ),
                               ),
@@ -393,9 +446,9 @@ class _ListViewScreenState extends State<ListViewScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Color(0x901E293B),
         appBar: AppBar(
-          backgroundColor: Colors.black,
+          backgroundColor: Color(0xFF1E293B),
           centerTitle: true,
           title: const Text(
             'MUSIC APP',
@@ -680,7 +733,13 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                                 Icons.more_vert,
                                                 color: Colors.tealAccent,
                                               ),
-                                              color: const Color(0xFF2A2A3A),
+                                              color: const Color(0xFF1E293B),
+                                              shape: RoundedRectangleBorder(
+                                                // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
+                                                borderRadius: BorderRadius.all(
+                                                  Radius.circular(20.0),
+                                                ),
+                                              ),
                                               onSelected: (value) {
                                                 if (value == 1)
                                                   _showAddToPlaylistBottomSheet(
@@ -914,11 +973,22 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                       fontSize: 18,
                                     ),
                                   ),
-                                  subtitle: Text(
-                                    '$songCount bài hát',
-                                    style: const TextStyle(
-                                      color: Colors.tealAccent,
+                                  // ĐÃ THAY THẾ: Dùng FutureBuilder để load thêm tổng thời gian
+                                  subtitle: FutureBuilder<String>(
+                                    future: _getPlaylistTotalDuration(
+                                      playlists[index].id,
                                     ),
+                                    builder: (context, snapshot) {
+                                      // snapshot.data chứa chuỗi thời gian trả về từ hàm trên
+                                      String timeString = snapshot.data ?? "";
+
+                                      return Text(
+                                        '$songCount bài hát$timeString',
+                                        style: const TextStyle(
+                                          color: Colors.tealAccent,
+                                        ),
+                                      );
+                                    },
                                   ),
                                   trailing: IconButton(
                                     icon: const Icon(

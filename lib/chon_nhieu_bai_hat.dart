@@ -80,9 +80,9 @@ class _ChonNhieuBaiHatScreenState extends State<ChonNhieuBaiHatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Color(0x901E293B),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.tealAccent),
         // Hiển thị số lượng bài hát đang được chọn
         title: Text(

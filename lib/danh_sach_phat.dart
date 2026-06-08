@@ -163,13 +163,13 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Color(0x901E293B),
       appBar: AppBar(
         title: Text(
           widget.playlist.playlist,
           style: const TextStyle(color: Colors.tealAccent),
         ),
-        backgroundColor: Colors.black,
+        backgroundColor: Color(0xFF1E293B),
         iconTheme: const IconThemeData(color: Colors.tealAccent),
         actions: [
           IconButton(
@@ -187,13 +187,32 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                 style: TextStyle(color: Colors.tealAccent),
               ),
             )
-          : ListView.builder(
+          // BẮT ĐẦU PHẦN THAY THẾ
+          : ReorderableListView.builder(
               itemCount: _songs.length,
+              // Hàm xử lý kéo thả
+              onReorder: (int oldIndex, int newIndex) {
+                setState(() {
+                  // Logic điều chỉnh index của Flutter
+                  if (oldIndex < newIndex) {
+                    newIndex -= 1;
+                  }
+                  // Cập nhật vị trí trong danh sách _songs
+                  final song = _songs.removeAt(oldIndex);
+                  _songs.insert(newIndex, song);
+
+                  // Cập nhật bộ nhớ đệm để giữ thứ tự mới
+                  globalPlaylistCache[widget.playlist.id] = _songs;
+                });
+              },
               itemBuilder: (context, index) {
                 final song = _songs[index];
                 bool isPlayingThisSong = _currentlyPlaying?.id == song.id;
 
                 return ListTile(
+                  // QUAN TRỌNG: Thêm key dựa trên ID bài hát để Flutter nhận diện khi kéo thả
+                  key: ValueKey(song.id),
+
                   leading: Icon(
                     isPlayingThisSong
                         ? Icons.play_circle_outline_outlined
@@ -257,6 +276,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                     },
                   ),
                   onTap: () async {
+                    // PHẦN CODE BÊN TRONG NÀY GIỮ NGUYÊN HOÀN TOÀN NHƯ CŨ
                     try {
                       final playlistSource = ConcatenatingAudioSource(
                         children: _songs.map((s) {
@@ -267,12 +287,10 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
 
                           return AudioSource.uri(
                             Uri.parse(uri),
-                            // ĐÃ SỬA: Chuyển đổi sang MediaItem để đồng bộ với toàn hệ thống
                             tag: MediaItem(
                               id: s.id.toString(),
                               title: s.title,
                               artist: s.artist ?? "Không biết",
-                              // Cấp luôn đường dẫn ảnh để bảng thông báo lên màu đẹp
                               artUri: s.albumId != null
                                   ? Uri.parse(
                                       'content://media/external/audio/albumart/${s.albumId}',

@@ -51,7 +51,7 @@ class MiniPlayer extends StatelessWidget {
                       type: ArtworkType.AUDIO,
                       artworkFit: BoxFit.cover,
                       nullArtworkWidget: Container(
-                        color: Colors.white54,
+                        color: Color(0xFF4B5563),
                         child: const Icon(
                           Icons.music_note,
                           color: Colors.tealAccent,

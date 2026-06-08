@@ -278,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final double artworkSize = (screenWidth * 0.75).clamp(200.0, 350.0);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: const Color(0x901E293B),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: const Text(
@@ -334,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: artworkSize,
                 height: artworkSize,
                 decoration: BoxDecoration(
-                  color: Colors.grey[800],
+                  color: Color(0xFF4B5563),
                   borderRadius: BorderRadius.circular(artworkSize / 2),
                   border: Border.all(color: Colors.tealAccent, width: 3),
                 ),
