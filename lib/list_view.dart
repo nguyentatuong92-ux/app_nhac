@@ -1,15 +1,13 @@
-// List_view.dart  trang chính
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:text_scroll/text_scroll.dart';
 import 'cap_nhat_service.dart';
-import 'danh_sach_phat.dart';
 import 'widgets/mini_player.dart';
-import 'package:just_audio_background/just_audio_background.dart';
-import 'package:flutter/foundation.dart';
+
+// Các Tab đã được tách riêng
+import 'tab_bai_hat.dart';
+import 'tab_danh_sach_phat.dart';
 
 class ListViewScreen extends StatefulWidget {
   const ListViewScreen({super.key});
@@ -22,41 +20,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
   final OnAudioQuery _audioQuery = OnAudioQuery();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  // HÀM MỚI: Tính tổng thời gian của một danh sách phát
-  Future<String> _getPlaylistTotalDuration(int playlistId) async {
-    try {
-      // Lấy tất cả bài hát trong danh sách phát này
-      List<SongModel> songs = await _audioQuery.queryAudiosFrom(
-        AudiosFromType.PLAYLIST,
-        playlistId,
-      );
-
-      // Cộng dồn thời gian (mili-giây)
-      int totalMilliseconds = 0;
-      for (var song in songs) {
-        totalMilliseconds += (song.duration ?? 0);
-      }
-
-      // Nếu danh sách trống thì không hiển thị thời gian
-      if (totalMilliseconds == 0) return "";
-
-      // Chuyển đổi sang phút và giây
-      Duration duration = Duration(milliseconds: totalMilliseconds);
-      int hours = duration.inHours;
-      int minutes = duration.inMinutes % 60;
-      int seconds = duration.inSeconds % 60;
-
-      // Định dạng chuỗi hiển thị
-      if (hours > 0) {
-        return " • ${hours}g ${minutes}p";
-      } else {
-        return " • ${minutes}p ${seconds}s";
-      }
-    } catch (e) {
-      return ""; // Nếu có lỗi thì không hiển thị gì cả
-    }
-  }
-
   bool _hasPermission = false;
   SongModel? currentlyPlaying;
 
@@ -64,16 +27,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
   bool _coBanCapNhatMoi = false;
 
   List<SongModel> _danhSachDangPhat = [];
-
-  // BIẾN QUẢN LÝ TẢI BÀI HÁT
   List<SongModel> _allSongs = [];
   bool _isLoadingSongs = true;
-
-  // BIẾN CHO THANH CUỘN A-Z
-  final ScrollController _scrollController = ScrollController();
-  final List<String> _alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split('');
-  String _currentLetter = "A";
-  final double _itemHeight = 75.0;
 
   Future<void> _kiemTraBanCapNhatNgam() async {
     bool coCapNhat = await CapNhatService.kiemTraCoBanCapNhatNgam();
@@ -84,7 +39,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
     }
   }
 
-  // Kiểm tra quyền khi mở app
   Future<void> _kiemTraQuyenDaCap() async {
     bool audioGranted = await Permission.audio.isGranted;
     bool storageGranted = await Permission.storage.isGranted;
@@ -99,7 +53,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
     }
   }
 
-  // Tải bài hát 1 lần duy nhất
   Future<void> _loadSongs() async {
     try {
       final songs = await _audioQuery.querySongs(
@@ -140,78 +93,21 @@ class _ListViewScreenState extends State<ListViewScreen> {
         });
       }
     });
-    _scrollController.addListener(_dongBoChuCaiKhiCuon);
   }
 
   @override
   void dispose() {
-    _scrollController.dispose();
     _audioPlayer.dispose();
     super.dispose();
-  }
-
-  // Đổi màu chữ cái trên thanh A-Z khi cuộn
-  void _dongBoChuCaiKhiCuon() {
-    if (!_scrollController.hasClients) return;
-
-    List<SongModel> songs = _allSongs
-        .where((s) => !_deletedSongIds.contains(s.id))
-        .toList();
-    if (songs.isEmpty) return;
-
-    int currentIndex = (_scrollController.offset / _itemHeight).floor();
-    if (currentIndex >= 0 && currentIndex < songs.length) {
-      String title = songs[currentIndex].title.trim();
-      if (title.isNotEmpty) {
-        String firstLetter = title[0].toUpperCase();
-        if (!_alphabet.contains(firstLetter)) firstLetter = "#";
-
-        if (_currentLetter != firstLetter) {
-          setState(() {
-            _currentLetter = firstLetter;
-          });
-        }
-      }
-    }
-  }
-
-  // Cuộn danh sách đến chữ cái được chọn
-  void _cuonDenChuCai(String letter, List<SongModel> songs) {
-    int targetIndex = songs.indexWhere((song) {
-      String title = song.title.trim().toUpperCase();
-      if (letter == "#") return RegExp(r'^[^A-Z]').hasMatch(title);
-      return title.startsWith(letter);
-    });
-
-    if (targetIndex != -1) {
-      setState(() {
-        _currentLetter = letter;
-      });
-      _scrollController.animateTo(
-        targetIndex * _itemHeight,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   Future<void> _checkAndRequestPermissions() async {
     try {
       await Permission.audio.request();
-    } catch (e) {
-      debugPrint("Lỗi khi xin quyền Audio: $e");
-    }
-
-    try {
       await Permission.storage.request();
-    } catch (e) {
-      debugPrint("Lỗi khi xin quyền Storage: $e");
-    }
-
-    try {
       await Permission.manageExternalStorage.request();
     } catch (e) {
-      debugPrint("Lỗi khi xin quyền Manage Storage: $e");
+      debugPrint("Lỗi khi xin quyền: $e");
     }
 
     if (mounted) {
@@ -222,233 +118,14 @@ class _ListViewScreenState extends State<ListViewScreen> {
     }
   }
 
-  void _showAddToPlaylistBottomSheet(SongModel song) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF2A2A3A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return FutureBuilder<List<PlaylistModel>>(
-          future: _audioQuery.queryPlaylists(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox(
-                height: 100,
-                child: Center(
-                  child: CircularProgressIndicator(color: Colors.tealAccent),
-                ),
-              );
-            }
-            if (snapshot.data == null || snapshot.data!.isEmpty) {
-              return const SizedBox(
-                height: 100,
-                child: Center(
-                  child: Text(
-                    "Chưa có danh sách phát nào.",
-                    style: TextStyle(color: Colors.tealAccent),
-                  ),
-                ),
-              );
-            }
-
-            List<PlaylistModel> playlists = snapshot.data!;
-            return ListView.builder(
-              shrinkWrap: true,
-              itemCount: playlists.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  leading: const Icon(
-                    Icons.queue_music,
-                    color: Colors.tealAccent,
-                  ),
-                  title: Text(
-                    playlists[index].playlist,
-                    style: const TextStyle(color: Colors.tealAccent),
-                  ),
-                  onTap: () async {
-                    await _audioQuery.addToPlaylist(
-                      playlists[index].id,
-                      song.id,
-                    );
-                    globalPlaylistCache.remove(playlists[index].id);
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: Color(0xFF64B5F6),
-                          behavior: SnackBarBehavior.floating,
-                          // Giúp SnackBar nổi lên khỏi viền dưới
-                          shape: RoundedRectangleBorder(
-                            // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(15.0),
-                            ),
-                          ),
-                          content: Text(
-                            'Đã thêm vào ${playlists[index].playlist}',
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 20,
-                            ),
-                          ),
-                        ),
-                      );
-                      setState(() {});
-                    }
-                  },
-                );
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showDeleteConfirmDialog(SongModel song) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A3A),
-          title: const Text(
-            'Xác nhận xóa',
-            style: TextStyle(color: Colors.tealAccent),
-          ),
-          content: Text(
-            'Bạn có chắc chắn muốn xóa bài hát "${song.title}" khỏi thiết bị không? Hành động này không thể hoàn tác.',
-            style: const TextStyle(color: Colors.tealAccent),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Hủy',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                try {
-                  if (song.data.isNotEmpty) {
-                    if (await Permission.manageExternalStorage
-                        .request()
-                        .isGranted) {
-                      final file = File(song.data);
-                      if (await file.exists()) {
-                        await file.delete();
-                        setState(() {
-                          _deletedSongIds.add(song.id);
-                        });
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              backgroundColor: Color(0xFF64B5F6),
-                              behavior: SnackBarBehavior.floating,
-                              // Giúp SnackBar nổi lên khỏi viền dưới
-                              shape: RoundedRectangleBorder(
-                                // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(15.0),
-                                ),
-                              ),
-                              content: Text(
-                                'Đã xóa bài hát khỏi thiết bị !',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 20,
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  }
-                } catch (e) {
-                  print("Đã xảy ra lỗi Exception khi xóa file: $e");
-                }
-              },
-              child: const Text(
-                'Xóa',
-                style: TextStyle(
-                  color: Colors.redAccent,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showCreatePlaylistDialog() {
-    TextEditingController controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A3A),
-          title: const Text(
-            'Tạo Danh Sách Mới',
-            style: TextStyle(color: Colors.tealAccent),
-          ),
-          content: SingleChildScrollView(
-            child: TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.tealAccent),
-              decoration: const InputDecoration(
-                hintText: 'Nhập tên danh sách...',
-                hintStyle: TextStyle(color: Colors.tealAccent),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.tealAccent),
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Hủy',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (controller.text.isNotEmpty) {
-                  await _audioQuery.createPlaylist(controller.text);
-                  setState(() {});
-                  if (context.mounted) Navigator.pop(context);
-                }
-              },
-              child: const Text(
-                'Tạo',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: Color(0x901E293B),
+        backgroundColor: const Color(0x901E293B),
         appBar: AppBar(
-          backgroundColor: Color(0xFF1E293B),
+          backgroundColor: const Color(0xFF1E293B),
           centerTitle: true,
           title: const Text(
             'MUSIC APP',
@@ -487,9 +164,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   const SnackBar(
                     backgroundColor: Color(0xFF64B5F6),
                     behavior: SnackBarBehavior.floating,
-                    // Giúp SnackBar nổi lên khỏi viền dưới
                     shape: RoundedRectangleBorder(
-                      // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
                       borderRadius: BorderRadius.all(Radius.circular(15.0)),
                     ),
                     content: Text(
@@ -554,479 +229,28 @@ class _ListViewScreenState extends State<ListViewScreen> {
               )
             : TabBarView(
                 children: [
-                  // ==========================================
-                  // TAB 1: BÀI HÁT (CÓ THANH A-Z)
-                  // ==========================================
-                  Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0,
-                          vertical: 8.0,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(
-                                  Icons.sort,
-                                  color: Colors.tealAccent,
-                                  size: 20,
-                                ),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Tên Bài Hát",
-                                  style: TextStyle(
-                                    color: Colors.tealAccent,
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: _isLoadingSongs
-                            ? const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.tealAccent,
-                                ),
-                              )
-                            : Builder(
-                                builder: (context) {
-                                  List<SongModel> songs = _allSongs
-                                      .where(
-                                        (s) => !_deletedSongIds.contains(s.id),
-                                      )
-                                      .toList();
-
-                                  if (songs.isEmpty) {
-                                    return const Center(
-                                      child: Text(
-                                        'Không có bài hát nào.',
-                                        style: TextStyle(
-                                          color: Colors.tealAccent,
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  return Stack(
-                                    children: [
-                                      ListView.separated(
-                                        key: const PageStorageKey<String>(
-                                          'danh_sach_chinh',
-                                        ),
-                                        controller: _scrollController,
-                                        itemCount: songs.length,
-                                        separatorBuilder: (context, index) =>
-                                            const Divider(
-                                              color: Colors.grey,
-                                              height: 0.5,
-                                              indent: 80,
-                                            ),
-                                        itemBuilder: (context, index) {
-                                          bool isPlayingThisSong =
-                                              currentlyPlaying?.id ==
-                                              songs[index].id;
-
-                                          return ListTile(
-                                            leading: SizedBox(
-                                              width: 50,
-                                              height: 50,
-                                              child: Stack(
-                                                children: [
-                                                  QueryArtworkWidget(
-                                                    id: songs[index].id,
-                                                    type: ArtworkType.AUDIO,
-                                                    artworkBorder:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                    artworkFit: BoxFit.cover,
-                                                    nullArtworkWidget: Container(
-                                                      width: 50,
-                                                      height: 50,
-                                                      decoration: BoxDecoration(
-                                                        color: const Color(
-                                                          0xFF2A2A2A,
-                                                        ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons.music_note,
-                                                        color: Colors.white54,
-                                                        size: 28,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  if (isPlayingThisSong)
-                                                    Container(
-                                                      width: 50,
-                                                      height: 50,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.black
-                                                            .withOpacity(0.5),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                      ),
-                                                      child: Icon(
-                                                        Icons
-                                                            .play_circle_outline,
-                                                        color:
-                                                            Colors.tealAccent,
-                                                        size: 28,
-                                                        shadows: [
-                                                          Shadow(
-                                                            color: Colors
-                                                                .tealAccent
-                                                                .withOpacity(
-                                                                  0.8,
-                                                                ),
-                                                            blurRadius: 10.0,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                            title: TextScroll(
-                                              songs[index].title,
-                                              mode: TextScrollMode.bouncing,
-                                              velocity: const Velocity(
-                                                pixelsPerSecond: Offset(30, 0),
-                                              ),
-                                              delayBefore: const Duration(
-                                                seconds: 2,
-                                              ),
-                                              pauseBetween: const Duration(
-                                                seconds: 2,
-                                              ),
-                                              style: TextStyle(
-                                                color: isPlayingThisSong
-                                                    ? Colors.tealAccent
-                                                    : Colors.white,
-                                                fontWeight: isPlayingThisSong
-                                                    ? FontWeight.bold
-                                                    : FontWeight.normal,
-                                              ),
-                                            ),
-                                            subtitle: Text(
-                                              songs[index].artist ??
-                                                  "Không biết",
-                                              style: const TextStyle(
-                                                color: Colors.tealAccent,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            trailing: PopupMenuButton<int>(
-                                              icon: const Icon(
-                                                Icons.more_vert,
-                                                color: Colors.tealAccent,
-                                              ),
-                                              color: const Color(0xFF1E293B),
-                                              shape: RoundedRectangleBorder(
-                                                // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(20.0),
-                                                ),
-                                              ),
-                                              onSelected: (value) {
-                                                if (value == 1)
-                                                  _showAddToPlaylistBottomSheet(
-                                                    songs[index],
-                                                  );
-                                                else if (value == 2)
-                                                  _showDeleteConfirmDialog(
-                                                    songs[index],
-                                                  );
-                                              },
-                                              itemBuilder: (context) => [
-                                                const PopupMenuItem(
-                                                  value: 1,
-                                                  child: Text(
-                                                    'Thêm vào danh sách phát',
-                                                    style: TextStyle(
-                                                      color: Colors.tealAccent,
-                                                      fontSize: 18,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const PopupMenuItem(
-                                                  value: 2,
-                                                  child: Text(
-                                                    'Xóa bài hát',
-                                                    style: TextStyle(
-                                                      color: Colors.tealAccent,
-                                                      fontSize: 18,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            onTap: () async {
-                                              try {
-                                                _danhSachDangPhat = songs;
-                                                final playlistSource =
-                                                    ConcatenatingAudioSource(
-                                                      children: songs.map((s) {
-                                                        String uri =
-                                                            s.data.isNotEmpty
-                                                            ? s.data
-                                                            : (s.uri ??
-                                                                  'content://media/external/audio/media/${s.id}');
-                                                        return AudioSource.uri(
-                                                          Uri.parse(uri),
-                                                          tag: MediaItem(
-                                                            id: s.id.toString(),
-                                                            title: s.title,
-                                                            artist:
-                                                                s.artist ??
-                                                                "Không biết",
-                                                            artUri:
-                                                                s.albumId !=
-                                                                    null
-                                                                ? Uri.parse(
-                                                                    'content://media/external/audio/albumart/${s.albumId}',
-                                                                  )
-                                                                : Uri.parse(
-                                                                    'asset:///assets/icon/music-notes-bg.png',
-                                                                  ),
-                                                          ),
-                                                        );
-                                                      }).toList(),
-                                                    );
-                                                await _audioPlayer
-                                                    .setAudioSource(
-                                                      playlistSource,
-                                                      initialIndex: index,
-                                                    );
-                                                _audioPlayer.play();
-                                              } catch (e) {
-                                                print("Lỗi phát nhạc: $e");
-                                              }
-                                            },
-                                          );
-                                        },
-                                      ),
-                                      Positioned(
-                                        right: 4,
-                                        top: 10,
-                                        bottom: 10,
-                                        child: LayoutBuilder(
-                                          builder: (context, constraints) {
-                                            return GestureDetector(
-                                              onVerticalDragUpdate: (details) {
-                                                double letterHeight =
-                                                    constraints.maxHeight /
-                                                    _alphabet.length;
-                                                int index =
-                                                    (details.localPosition.dy /
-                                                            letterHeight)
-                                                        .floor();
-                                                if (index >= 0 &&
-                                                    index < _alphabet.length) {
-                                                  _cuonDenChuCai(
-                                                    _alphabet[index],
-                                                    songs,
-                                                  );
-                                                }
-                                              },
-                                              child: Container(
-                                                width: 30,
-                                                color: Colors.transparent,
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: _alphabet.map((
-                                                    letter,
-                                                  ) {
-                                                    bool isSelected =
-                                                        _currentLetter ==
-                                                        letter;
-                                                    return Expanded(
-                                                      child: GestureDetector(
-                                                        onTap: () =>
-                                                            _cuonDenChuCai(
-                                                              letter,
-                                                              songs,
-                                                            ),
-                                                        child: Center(
-                                                          child: Text(
-                                                            letter,
-                                                            style: TextStyle(
-                                                              color: isSelected
-                                                                  ? Colors.white
-                                                                  : Colors
-                                                                        .tealAccent
-                                                                        .withOpacity(
-                                                                          0.5,
-                                                                        ),
-                                                              fontWeight:
-                                                                  isSelected
-                                                                  ? FontWeight
-                                                                        .bold
-                                                                  : FontWeight
-                                                                        .normal,
-                                                              fontSize:
-                                                                  isSelected
-                                                                  ? 16
-                                                                  : 11,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    );
-                                                  }).toList(),
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                      ),
-                    ],
+                  // TAB 1: BÀI HÁT
+                  TabBaiHat(
+                    allSongs: _allSongs,
+                    isLoadingSongs: _isLoadingSongs,
+                    audioPlayer: _audioPlayer,
+                    audioQuery: _audioQuery,
+                    currentlyPlaying: currentlyPlaying,
+                    deletedSongIds: _deletedSongIds,
+                    onSongDeleted: (songId) {
+                      setState(() {
+                        _deletedSongIds.add(songId);
+                      });
+                    },
+                    onPlaySongs: (songs) {
+                      _danhSachDangPhat = songs;
+                    },
                   ),
 
-                  // ==========================================
                   // TAB 2: DANH SÁCH PHÁT
-                  // ==========================================
-                  Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(
-                          Icons.add_circle,
-                          color: Colors.tealAccent,
-                          size: 40,
-                        ),
-                        title: const Text(
-                          'Tạo danh sách phát mới',
-                          style: TextStyle(
-                            color: Colors.tealAccent,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        onTap: () => _showCreatePlaylistDialog(),
-                      ),
-                      const Divider(color: Colors.tealAccent, height: 1),
-                      Expanded(
-                        child: FutureBuilder<List<PlaylistModel>>(
-                          future: _audioQuery.queryPlaylists(),
-                          builder: (context, item) {
-                            if (item.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.tealAccent,
-                                ),
-                              );
-                            }
-                            if (item.data == null || item.data!.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'Chưa có danh sách phát.',
-                                  style: TextStyle(
-                                    color: Colors.tealAccent,
-                                    fontSize: 22,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            List<PlaylistModel> playlists = item.data!;
-                            return ListView.builder(
-                              itemCount: playlists.length,
-                              itemBuilder: (context, index) {
-                                int songCount = playlists[index].numOfSongs;
-                                if (globalPlaylistCache.containsKey(
-                                  playlists[index].id,
-                                )) {
-                                  songCount =
-                                      globalPlaylistCache[playlists[index].id]!
-                                          .length;
-                                }
-
-                                return ListTile(
-                                  leading: const Icon(
-                                    Icons.queue_music,
-                                    color: Colors.tealAccent,
-                                    size: 40,
-                                  ),
-                                  title: Text(
-                                    playlists[index].playlist,
-                                    style: const TextStyle(
-                                      color: Colors.tealAccent,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  // ĐÃ THAY THẾ: Dùng FutureBuilder để load thêm tổng thời gian
-                                  subtitle: FutureBuilder<String>(
-                                    future: _getPlaylistTotalDuration(
-                                      playlists[index].id,
-                                    ),
-                                    builder: (context, snapshot) {
-                                      // snapshot.data chứa chuỗi thời gian trả về từ hàm trên
-                                      String timeString = snapshot.data ?? "";
-
-                                      return Text(
-                                        '$songCount bài hát$timeString',
-                                        style: const TextStyle(
-                                          color: Colors.tealAccent,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                  trailing: IconButton(
-                                    icon: const Icon(
-                                      Icons.delete,
-                                      color: Colors.tealAccent,
-                                      size: 30,
-                                    ),
-                                    onPressed: () async {
-                                      await _audioQuery.removePlaylist(
-                                        playlists[index].id,
-                                      );
-                                      globalPlaylistCache.remove(
-                                        playlists[index].id,
-                                      );
-                                      setState(() {});
-                                    },
-                                  ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            PlaylistDetailsScreen(
-                                              playlist: playlists[index],
-                                              audioPlayer: _audioPlayer,
-                                              audioQuery: _audioQuery,
-                                              onPlaySong: (song) {},
-                                            ),
-                                      ),
-                                    ).then((value) => setState(() {}));
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
+                  TabDanhSachPhat(
+                    audioQuery: _audioQuery,
+                    audioPlayer: _audioPlayer,
                   ),
                 ],
               ),

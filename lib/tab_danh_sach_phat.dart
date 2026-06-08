@@ -1,0 +1,214 @@
+import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:on_audio_query/on_audio_query.dart';
+import 'danh_sach_phat.dart'; // Để dùng PlaylistDetailsScreen và globalPlaylistCache
+
+class TabDanhSachPhat extends StatefulWidget {
+  final OnAudioQuery audioQuery;
+  final AudioPlayer audioPlayer;
+
+  const TabDanhSachPhat({
+    super.key,
+    required this.audioQuery,
+    required this.audioPlayer,
+  });
+
+  @override
+  State<TabDanhSachPhat> createState() => _TabDanhSachPhatState();
+}
+
+class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
+  // Chuyển hàm tạo danh sách phát sang đây
+  void _showCreatePlaylistDialog() {
+    TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A2A3A),
+          title: const Text(
+            'Tạo Danh Sách Mới',
+            style: TextStyle(color: Colors.tealAccent),
+          ),
+          content: SingleChildScrollView(
+            child: TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.tealAccent),
+              decoration: const InputDecoration(
+                hintText: 'Nhập tên danh sách...',
+                hintStyle: TextStyle(color: Colors.tealAccent),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey),
+                ),
+                focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.tealAccent),
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Hủy',
+                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (controller.text.isNotEmpty) {
+                  await widget.audioQuery.createPlaylist(controller.text);
+                  setState(() {}); // Làm mới danh sách
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text(
+                'Tạo',
+                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Chuyển hàm tính tổng thời gian sang đây
+  Future<String> _getPlaylistTotalDuration(int playlistId) async {
+    try {
+      List<SongModel> songs = await widget.audioQuery.queryAudiosFrom(
+        AudiosFromType.PLAYLIST,
+        playlistId,
+      );
+
+      int totalMilliseconds = 0;
+      for (var song in songs) {
+        totalMilliseconds += (song.duration ?? 0);
+      }
+
+      if (totalMilliseconds == 0) return "";
+
+      Duration duration = Duration(milliseconds: totalMilliseconds);
+      int hours = duration.inHours;
+      int minutes = duration.inMinutes % 60;
+      int seconds = duration.inSeconds % 60;
+
+      if (hours > 0) {
+        return " • ${hours}g ${minutes}p";
+      } else {
+        return " • ${minutes}p ${seconds}s";
+      }
+    } catch (e) {
+      return "";
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ListTile(
+          leading: const Icon(
+            Icons.add_circle,
+            color: Colors.tealAccent,
+            size: 40,
+          ),
+          title: const Text(
+            'Tạo danh sách phát mới',
+            style: TextStyle(
+              color: Colors.tealAccent,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          onTap: () => _showCreatePlaylistDialog(),
+        ),
+        const Divider(color: Colors.tealAccent, height: 1),
+        Expanded(
+          child: FutureBuilder<List<PlaylistModel>>(
+            future: widget.audioQuery.queryPlaylists(),
+            builder: (context, item) {
+              if (item.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: Colors.tealAccent),
+                );
+              }
+              if (item.data == null || item.data!.isEmpty) {
+                return const Center(
+                  child: Text(
+                    'Chưa có danh sách phát.',
+                    style: TextStyle(color: Colors.tealAccent, fontSize: 22),
+                  ),
+                );
+              }
+
+              List<PlaylistModel> playlists = item.data!;
+              return ListView.builder(
+                itemCount: playlists.length,
+                itemBuilder: (context, index) {
+                  int songCount = playlists[index].numOfSongs;
+                  if (globalPlaylistCache.containsKey(playlists[index].id)) {
+                    songCount =
+                        globalPlaylistCache[playlists[index].id]!.length;
+                  }
+
+                  return ListTile(
+                    leading: const Icon(
+                      Icons.queue_music,
+                      color: Colors.tealAccent,
+                      size: 40,
+                    ),
+                    title: Text(
+                      playlists[index].playlist,
+                      style: const TextStyle(
+                        color: Colors.tealAccent,
+                        fontSize: 18,
+                      ),
+                    ),
+                    subtitle: FutureBuilder<String>(
+                      future: _getPlaylistTotalDuration(playlists[index].id),
+                      builder: (context, snapshot) {
+                        String timeString = snapshot.data ?? "";
+                        return Text(
+                          '$songCount bài hát$timeString',
+                          style: const TextStyle(color: Colors.tealAccent),
+                        );
+                      },
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.tealAccent,
+                        size: 30,
+                      ),
+                      onPressed: () async {
+                        await widget.audioQuery.removePlaylist(
+                          playlists[index].id,
+                        );
+                        globalPlaylistCache.remove(playlists[index].id);
+                        setState(() {});
+                      },
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PlaylistDetailsScreen(
+                            playlist: playlists[index],
+                            audioPlayer: widget.audioPlayer,
+                            audioQuery: widget.audioQuery,
+                            onPlaySong: (song) {},
+                          ),
+                        ),
+                      ).then((value) => setState(() {}));
+                    },
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
