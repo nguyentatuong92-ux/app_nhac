@@ -189,6 +189,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
             )
           // BẮT ĐẦU PHẦN THAY THẾ
           : ReorderableListView.builder(
+              padding: const EdgeInsets.only(bottom: 100),
               itemCount: _songs.length,
               // Hàm xử lý kéo thả
               onReorder: (int oldIndex, int newIndex) {

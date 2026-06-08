@@ -300,6 +300,7 @@ class _TabBaiHatState extends State<TabBaiHat> {
                     return Stack(
                       children: [
                         ListView.separated(
+                          padding: const EdgeInsets.only(bottom: 100),
                           key: const PageStorageKey<String>('danh_sach_chinh'),
                           controller: _scrollController,
                           itemCount: songs.length,
