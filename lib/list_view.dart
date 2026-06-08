@@ -857,7 +857,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                           'Tạo danh sách phát mới',
                           style: TextStyle(
                             color: Colors.tealAccent,
-                            fontSize: 25,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

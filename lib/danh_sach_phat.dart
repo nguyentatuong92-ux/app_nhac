@@ -143,9 +143,16 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            backgroundColor: Color(0xFF64B5F6),
+            behavior: SnackBarBehavior.floating,
+            // Giúp SnackBar nổi lên khỏi viền dưới
+            shape: RoundedRectangleBorder(
+              // Đã sửa: Đưa về cùng một dòng và dùng cú pháp an toàn cho const
+              borderRadius: BorderRadius.all(Radius.circular(15.0)),
+            ),
             content: Text(
               'Đã thêm các bài hát vào danh sách!',
-              style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+              style: TextStyle(color: Colors.black, fontSize: 18),
             ),
           ),
         );
@@ -230,10 +237,17 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
+                            backgroundColor: Color(0xFF64B5F6),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(15.0),
+                              ),
+                            ),
                             content: Text(
                               'Đã xóa khỏi danh sách',
                               style: TextStyle(
-                                color: Colors.tealAccent,
+                                color: Colors.black,
                                 fontSize: 18,
                               ),
                             ),
