@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
-import '../home_screen.dart';
+import 'home_screen.dart';
 
 class MiniPlayer extends StatelessWidget {
   final SongModel currentSong;

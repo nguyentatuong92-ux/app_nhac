@@ -6,6 +6,7 @@ import 'package:just_audio_background/just_audio_background.dart'; // Đã thêm
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
 import 'package:volume_controller/volume_controller.dart';
+import 'danh_sach_dang_phat.dart';
 
 class HomeScreen extends StatefulWidget {
   final AudioPlayer audioPlayer;
@@ -64,8 +65,16 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
 
-    widget.audioPlayer.playingStream.listen((playing) {
-      if (mounted) setState(() => isPlaying = playing);
+    // ĐÃ SỬA: Lắng nghe toàn bộ trạng thái của trình phát
+    widget.audioPlayer.playerStateStream.listen((state) {
+      if (mounted) {
+        setState(() {
+          // Chỉ hiện nút Pause khi đang play VÀ chưa chạy hết bài cuối
+          isPlaying =
+              state.playing &&
+              state.processingState != ProcessingState.completed;
+        });
+      }
     });
     widget.audioPlayer.durationStream.listen(
       (d) => setState(() => _duration = d ?? Duration.zero),
@@ -363,7 +372,94 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(color: Colors.tealAccent, fontSize: 24),
               ),
               const Spacer(),
+              // NÚT CHẾ ĐỘ PHÁT (ĐẶT Ở GIỮA)
+              Row(
+                mainAxisAlignment:
+                    MainAxisAlignment.spaceAround, // Căn giữa nút
+                children: [
+                  // NÚT DANH SÁCH ĐANG PHÁT MỚI THÊM
+                  IconButton(
+                    icon: const Icon(
+                      Icons.queue_music,
+                      color: Colors.tealAccent,
+                      size: 30,
+                    ),
+                    onPressed: () {
+                      // Gọi hàm tĩnh từ tệp mới để hiển thị bảng
+                      DanhSachDangPhat.show(context, widget.audioPlayer);
+                    },
+                  ),
+                  StreamBuilder<LoopMode>(
+                    stream: widget.audioPlayer.loopModeStream,
+                    builder: (context, snapshot) {
+                      final loopMode = snapshot.data ?? LoopMode.off;
 
+                      Icon icon;
+                      if (loopMode == LoopMode.off) {
+                        icon = const Icon(
+                          Icons.repeat,
+                          color: Colors.grey,
+                          size: 30,
+                        );
+                      } else if (loopMode == LoopMode.all) {
+                        icon = const Icon(
+                          Icons.repeat,
+                          color: Colors.tealAccent,
+                          size: 30,
+                        );
+                      } else {
+                        icon = const Icon(
+                          Icons.repeat_one,
+                          color: Colors.tealAccent,
+                          size: 30,
+                        );
+                      }
+
+                      return IconButton(
+                        icon: icon,
+                        onPressed: () {
+                          String thongBao = "";
+
+                          if (loopMode == LoopMode.off) {
+                            widget.audioPlayer.setLoopMode(LoopMode.all);
+                            thongBao = "Đã bật: Lặp toàn bộ danh sách";
+                          } else if (loopMode == LoopMode.all) {
+                            widget.audioPlayer.setLoopMode(LoopMode.one);
+                            thongBao = "Đã bật: Lặp 1 bài hiện tại";
+                          } else {
+                            widget.audioPlayer.setLoopMode(LoopMode.off);
+                            thongBao = "Đã tắt: Phát theo danh sách";
+                          }
+
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              // Làm nền trong suốt và xóa đổ bóng
+                              backgroundColor: Colors.transparent,
+                              elevation: 0,
+                              behavior: SnackBarBehavior.floating,
+                              margin: const EdgeInsets.only(bottom: 230),
+                              content: Text(
+                                thongBao,
+                                style: const TextStyle(
+                                  color: Colors
+                                      .tealAccent, // Đổi màu chữ cho hợp theme
+                                  fontSize: 16,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              duration: const Duration(milliseconds: 1500),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15),
+
+              // Kết thúc phần nút lặp lại
               Column(
                 children: [
                   Slider(
@@ -418,9 +514,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.tealAccent,
                       size: 70,
                     ),
-                    onPressed: () => isPlaying
-                        ? widget.audioPlayer.pause()
-                        : widget.audioPlayer.play(),
+                    onPressed: () {
+                      if (isPlaying) {
+                        widget.audioPlayer.pause();
+                      } else {
+                        // Nếu đã hát hết danh sách (completed), tua lại bài đầu tiên rồi mới phát
+                        if (widget.audioPlayer.processingState ==
+                            ProcessingState.completed) {
+                          widget.audioPlayer.seek(Duration.zero, index: 0);
+                        }
+                        widget.audioPlayer.play();
+                      }
+                    },
                   ),
                   IconButton(
                     icon: const Icon(

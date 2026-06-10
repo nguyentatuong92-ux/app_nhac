@@ -27,8 +27,14 @@ class MyApp extends StatelessWidget {
       title: 'Ứng Dụng Nhạc',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xFF1E293B),
+        canvasColor: const Color(0xFF1E293B),
+        // KẾT THÚC PHẦN THÊM MỚI
       ),
       home: const ListViewScreen(), // Mở màn hình danh sách đầu tiên
     );

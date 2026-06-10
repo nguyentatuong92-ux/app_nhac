@@ -3,9 +3,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'cap_nhat_service.dart';
-import 'widgets/mini_player.dart';
-
-// Các Tab đã được tách riêng
+import 'mini_player.dart';
 import 'tab_bai_hat.dart';
 import 'tab_danh_sach_phat.dart';
 
