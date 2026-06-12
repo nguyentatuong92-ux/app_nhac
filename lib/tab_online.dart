@@ -140,6 +140,21 @@ class _TabOnlineState extends State<TabOnline>
                                   : Colors.grey,
                             ),
                           ),
+                          // --- THÊM NÚT TẢI VỀ Ở ĐÂY ---
+                          trailing: IconButton(
+                            icon: const Icon(
+                              Icons.download,
+                              color: Colors.tealAccent,
+                            ),
+                            tooltip: "Tải bài hát này",
+                            onPressed: () {
+                              // Gọi hàm tải nhạc mà chúng ta vừa viết
+                              OnlineMusicController.downloadSong(
+                                video,
+                                context,
+                              );
+                            },
+                          ),
                           onTap: () async {
                             // Gọi hàm phát nhạc từ Controller (Xoáy tròn sẽ tự hiện ra từ đây)
                             await OnlineMusicController.playSong(
