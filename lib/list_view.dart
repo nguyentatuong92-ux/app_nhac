@@ -204,10 +204,30 @@ class _ListViewScreenState extends State<ListViewScreen> {
             labelColor: Colors.tealAccent,
             unselectedLabelColor: Colors.tealAccent,
             indicatorColor: Colors.tealAccent,
+
+            // 1. Ép khoảng trống hai bên của mỗi tab nhỏ lại để nhường chỗ cho chữ
+            labelPadding: EdgeInsets.symmetric(horizontal: 4.0),
+
             tabs: [
-              Tab(text: 'Bài hát', icon: Icon(Icons.music_note)),
-              Tab(text: 'Danh sách', icon: Icon(Icons.queue_music)),
-              Tab(text: 'Online', icon: Icon(Icons.language)),
+              Tab(
+                icon: Icon(Icons.music_note),
+                // 2. Thay vì dùng thuộc tính 'text', ta dùng 'child' kết hợp FittedBox
+                child: FittedBox(
+                  fit: BoxFit.scaleDown, // Tự động thu nhỏ chữ nếu bị thiếu chỗ
+                  child: Text('Bài hát'),
+                ),
+              ),
+              Tab(
+                icon: Icon(Icons.queue_music),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Danh sách'),
+                ),
+              ),
+              Tab(
+                icon: Icon(Icons.language),
+                child: FittedBox(fit: BoxFit.scaleDown, child: Text('Online')),
+              ),
             ],
           ),
         ),
@@ -288,11 +308,18 @@ class _ListViewScreenState extends State<ListViewScreen> {
                 ],
               ),
 
-        // --- MỚI THÊM: Điều kiện hiển thị MiniPlayer được nâng cấp ---
-        bottomNavigationBar: (currentlyPlaying != null || _isOnlinePlaying)
-            ? SafeArea(
+        // --- SỬA LỖI 1 TẠI ĐÂY ---
+        bottomNavigationBar: StreamBuilder<SequenceState?>(
+          stream: _audioPlayer.sequenceStateStream,
+          builder: (context, snapshot) {
+            // Tự động kiểm tra xem có bài hát nào đang được tải vào audioPlayer không
+            final hasAudio =
+                snapshot.hasData && snapshot.data?.currentSource != null;
+
+            if (hasAudio) {
+              return SafeArea(
                 child: MiniPlayer(
-                  // Dữ liệu cho MiniPlayer (dùng code MiniPlayer bản nâng cấp tôi đã gửi trước đó)
+                  // Dữ liệu cho MiniPlayer
                   isOnline: _isOnlinePlaying,
                   currentSong: currentlyPlaying,
                   onlineTitle: _onlineTitle,
@@ -301,8 +328,12 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   audioPlayer: _audioPlayer,
                   onRefresh: () => setState(() {}),
                 ),
-              )
-            : const SizedBox.shrink(),
+              );
+            }
+            // Nếu không có nhạc, tự động ẩn đi
+            return const SizedBox.shrink();
+          },
+        ),
       ),
     );
   }

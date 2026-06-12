@@ -19,6 +19,16 @@ class OnlineMusicController {
   ) async {
     if (index < 0 || index >= searchResults.length) return;
 
+    // 1. HIỂN THỊ XOÁY TRÒN TẢI DỮ LIỆU
+    showDialog(
+      context: context,
+      barrierDismissible:
+          false, // Ngăn người dùng bấm ra ngoài để tắt màn hình tải
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Colors.tealAccent),
+      ),
+    );
+
     currentIndex.value = index; // Cập nhật vị trí
     final video = searchResults[index];
 
@@ -37,11 +47,10 @@ class OnlineMusicController {
       final audioSource = AudioSource.uri(
         audioStreamInfo.url,
         tag: MediaItem(
-          id: video.id.value.hashCode.toString(), // Fix lỗi crash
+          id: video.id.value.hashCode.toString(),
           title: video.title,
           artist: video.author,
           artUri: Uri.parse(video.thumbnails.highResUrl),
-          // CỰC KỲ QUAN TRỌNG: Gắn cờ để nhận diện đây là nhạc online!
           extras: {'is_online': true},
         ),
       );
@@ -56,6 +65,11 @@ class OnlineMusicController {
             content: Text("Không thể phát bài hát này. Vui lòng thử bài khác."),
           ),
         );
+      }
+    } finally {
+      // 2. ĐÓNG XOÁY TRÒN KHI ĐÃ TẢI XONG (HOẶC BỊ LỖI)
+      if (context.mounted) {
+        Navigator.pop(context);
       }
     }
   }

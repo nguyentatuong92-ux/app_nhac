@@ -126,14 +126,14 @@ class MiniPlayer extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // NÚT LÙI BÀI
                       IconButton(
                         icon: const Icon(
                           Icons.skip_previous,
                           color: Colors.tealAccent,
                         ),
                         onPressed: () {
-                          if (isOnline) {
+                          // SỬA Ở ĐÂY: Dùng isOnlineNow thay vì isOnline
+                          if (isOnlineNow) {
                             OnlineMusicController.playPrevious(
                               audioPlayer,
                               context,
@@ -169,7 +169,8 @@ class MiniPlayer extends StatelessWidget {
                           color: Colors.tealAccent,
                         ),
                         onPressed: () {
-                          if (isOnline) {
+                          // SỬA Ở ĐÂY: Dùng isOnlineNow thay vì isOnline
+                          if (isOnlineNow) {
                             OnlineMusicController.playNext(
                               audioPlayer,
                               context,

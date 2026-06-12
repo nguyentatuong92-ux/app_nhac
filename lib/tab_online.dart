@@ -54,10 +54,45 @@ class _TabOnlineState extends State<TabOnline>
           child: TextField(
             controller: _searchController,
             onSubmitted: _searchMusic,
-            decoration: const InputDecoration(
-              hintText: "Tìm kiếm...",
+            style: const TextStyle(color: Colors.tealAccent), // Màu chữ khi gõ
+            decoration: InputDecoration(
+              // 2. Dòng chữ ẩn
+              hintText: "Vui lòng nhập bài hát...",
+              hintStyle: const TextStyle(color: Colors.blueGrey),
               filled: true,
-              fillColor: Color(0xFF2A2A3A),
+              fillColor: const Color(0xFF2A2A3A),
+
+              // 2. Icon tìm kiếm (Đã được nâng cấp thành nút bấm)
+              prefixIcon: IconButton(
+                icon: const Icon(Icons.search, color: Colors.tealAccent),
+                onPressed: () {
+                  // Lấy nội dung chữ người dùng vừa nhập
+                  final query = _searchController.text;
+
+                  // Tự động thu gọn bàn phím xuống
+                  FocusScope.of(context).unfocus();
+
+                  // Thực hiện tìm kiếm
+                  _searchMusic(query);
+                },
+              ),
+
+              // 3. Dấu X ở cuối để xóa nội dung
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.clear, color: Colors.tealAccent),
+                onPressed: () {
+                  _searchController.clear(); // Lệnh xóa trắng ô nhập
+                },
+              ),
+
+              // 1. Bo tròn 4 góc
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(30.0), // Độ bo tròn
+                borderSide: BorderSide.none, // Ẩn đường viền mặc định
+              ),
+
+              // Căn chỉnh lại khoảng cách chữ bên trong cho cân đối
+              contentPadding: const EdgeInsets.symmetric(vertical: 15.0),
             ),
           ),
         ),
@@ -106,11 +141,21 @@ class _TabOnlineState extends State<TabOnline>
                             ),
                           ),
                           onTap: () async {
+                            // Gọi hàm phát nhạc từ Controller (Xoáy tròn sẽ tự hiện ra từ đây)
                             await OnlineMusicController.playSong(
                               index,
                               widget.audioPlayer,
                               context,
                             );
+
+                            // Cập nhật thẻ MiniPlayer
+                            if (widget.onPlay != null) {
+                              widget.onPlay!(
+                                video.title,
+                                video.author,
+                                video.thumbnails.highResUrl,
+                              );
+                            }
                           },
                         );
                       },
