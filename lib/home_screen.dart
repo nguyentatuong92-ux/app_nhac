@@ -7,6 +7,7 @@ import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'danh_sach_dang_phat.dart';
+import 'online_music_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   final AudioPlayer audioPlayer;
@@ -500,13 +501,24 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  // NÚT LÙI BÀI
                   IconButton(
                     icon: const Icon(
                       Icons.skip_previous,
                       size: 50,
                       color: Colors.tealAccent,
                     ),
-                    onPressed: () => widget.audioPlayer.seekToPrevious(),
+                    onPressed: () {
+                      // Kiểm tra xem có đang hát nhạc Online không dựa vào cờ is_online
+                      if (currentItem?.extras?['is_online'] == true) {
+                        OnlineMusicController.playPrevious(
+                          widget.audioPlayer,
+                          context,
+                        );
+                      } else {
+                        widget.audioPlayer.seekToPrevious();
+                      }
+                    },
                   ),
                   IconButton(
                     icon: Icon(
@@ -527,13 +539,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
                     },
                   ),
+                  // NÚT QUA BÀI
                   IconButton(
                     icon: const Icon(
                       Icons.skip_next,
                       size: 50,
                       color: Colors.tealAccent,
                     ),
-                    onPressed: () => widget.audioPlayer.seekToNext(),
+                    onPressed: () {
+                      if (currentItem?.extras?['is_online'] == true) {
+                        OnlineMusicController.playNext(
+                          widget.audioPlayer,
+                          context,
+                        );
+                      } else {
+                        widget.audioPlayer.seekToNext();
+                      }
+                    },
                   ),
                 ],
               ),

@@ -6,6 +6,7 @@ import 'cap_nhat_service.dart';
 import 'mini_player.dart';
 import 'tab_bai_hat.dart';
 import 'tab_danh_sach_phat.dart';
+import 'tab_online.dart';
 
 class ListViewScreen extends StatefulWidget {
   const ListViewScreen({super.key});
@@ -19,7 +20,16 @@ class _ListViewScreenState extends State<ListViewScreen> {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   bool _hasPermission = false;
+
+  // BIẾN CHO NHẠC OFFLINE
   SongModel? currentlyPlaying;
+
+  // --- MỚI THÊM: BIẾN CHO NHẠC ONLINE ---
+  bool _isOnlinePlaying = false;
+  String? _onlineTitle;
+  String? _onlineArtist;
+  String? _onlineThumbUrl;
+  // --------------------------------------
 
   final Set<int> _deletedSongIds = {};
   bool _coBanCapNhatMoi = false;
@@ -75,6 +85,18 @@ class _ListViewScreenState extends State<ListViewScreen> {
     }
   }
 
+  // --- MỚI THÊM: HÀM NHẬN DỮ LIỆU TỪ TAB ONLINE ---
+  void _handlePlayOnline(String title, String artist, String thumbUrl) {
+    setState(() {
+      _isOnlinePlaying = true;
+      _onlineTitle = title;
+      _onlineArtist = artist;
+      _onlineThumbUrl = thumbUrl;
+      currentlyPlaying = null; // Xóa trạng thái bài Offline
+    });
+  }
+  // ------------------------------------------------
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +106,9 @@ class _ListViewScreenState extends State<ListViewScreen> {
     });
 
     _audioPlayer.currentIndexStream.listen((index) {
+      // MỚI THÊM: Bỏ qua update index nếu đang phát Online
+      if (_isOnlinePlaying) return;
+
       if (index == null || _danhSachDangPhat.isEmpty) return;
       if (mounted) {
         setState(() {
@@ -119,9 +144,10 @@ class _ListViewScreenState extends State<ListViewScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: const Color(0x901E293B),
+        // ... (Phần AppBar giữ nguyên không đổi) ...
         appBar: AppBar(
           backgroundColor: const Color(0xFF1E293B),
           centerTitle: true,
@@ -180,12 +206,14 @@ class _ListViewScreenState extends State<ListViewScreen> {
             indicatorColor: Colors.tealAccent,
             tabs: [
               Tab(text: 'Bài hát', icon: Icon(Icons.music_note)),
-              Tab(text: 'Danh sách phát', icon: Icon(Icons.queue_music)),
+              Tab(text: 'Danh sách', icon: Icon(Icons.queue_music)),
+              Tab(text: 'Online', icon: Icon(Icons.language)),
             ],
           ),
         ),
         body: !_hasPermission
             ? Center(
+                // ... (Phần hiển thị xin quyền giữ nguyên) ...
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -227,7 +255,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
               )
             : TabBarView(
                 children: [
-                  // TAB 1: BÀI HÁT
                   TabBaiHat(
                     allSongs: _allSongs,
                     isLoadingSongs: _isLoadingSongs,
@@ -241,21 +268,36 @@ class _ListViewScreenState extends State<ListViewScreen> {
                       });
                     },
                     onPlaySongs: (songs) {
-                      _danhSachDangPhat = songs;
+                      setState(() {
+                        _danhSachDangPhat = songs;
+                        _isOnlinePlaying =
+                            false; // MỚI THÊM: Hủy trạng thái Online khi chọn nhạc Offline
+                      });
                     },
                   ),
-
-                  // TAB 2: DANH SÁCH PHÁT
                   TabDanhSachPhat(
                     audioQuery: _audioQuery,
                     audioPlayer: _audioPlayer,
                   ),
+
+                  // MỚI THÊM: Truyền hàm callback vào TabOnline
+                  TabOnline(
+                    audioPlayer: _audioPlayer,
+                    onPlay: _handlePlayOnline,
+                  ),
                 ],
               ),
-        bottomNavigationBar: currentlyPlaying != null
+
+        // --- MỚI THÊM: Điều kiện hiển thị MiniPlayer được nâng cấp ---
+        bottomNavigationBar: (currentlyPlaying != null || _isOnlinePlaying)
             ? SafeArea(
                 child: MiniPlayer(
-                  currentSong: currentlyPlaying!,
+                  // Dữ liệu cho MiniPlayer (dùng code MiniPlayer bản nâng cấp tôi đã gửi trước đó)
+                  isOnline: _isOnlinePlaying,
+                  currentSong: currentlyPlaying,
+                  onlineTitle: _onlineTitle,
+                  onlineArtist: _onlineArtist,
+                  onlineThumbUrl: _onlineThumbUrl,
                   audioPlayer: _audioPlayer,
                   onRefresh: () => setState(() {}),
                 ),

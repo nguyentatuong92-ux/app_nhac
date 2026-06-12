@@ -472,59 +472,93 @@ class _TabBaiHatState extends State<TabBaiHat> {
                             );
                           },
                         ),
-                        Positioned(
-                          right: 4,
-                          top: 10,
-                          bottom: 10,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              return GestureDetector(
-                                onVerticalDragUpdate: (details) {
-                                  double letterHeight =
-                                      constraints.maxHeight / _alphabet.length;
-                                  int index =
-                                      (details.localPosition.dy / letterHeight)
-                                          .floor();
-                                  if (index >= 0 && index < _alphabet.length) {
-                                    _cuonDenChuCai(_alphabet[index], songs);
-                                  }
-                                },
-                                child: Container(
-                                  width: 30,
-                                  color: Colors.transparent,
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: _alphabet.map((letter) {
-                                      bool isSelected =
-                                          _currentLetter == letter;
-                                      return Expanded(
-                                        child: GestureDetector(
-                                          onTap: () =>
-                                              _cuonDenChuCai(letter, songs),
-                                          child: Center(
-                                            child: Text(
-                                              letter,
-                                              style: TextStyle(
-                                                color: isSelected
-                                                    ? Colors.white
-                                                    : Colors.tealAccent
-                                                          .withOpacity(0.5),
-                                                fontWeight: isSelected
-                                                    ? FontWeight.bold
-                                                    : FontWeight.normal,
-                                                fontSize: isSelected ? 16 : 11,
+                        // BẮT ĐẦU PHẦN THAY THẾ: Tự động căn chỉnh bằng tỷ lệ phần trăm
+                        Align(
+                          alignment: Alignment.centerRight,
+                          // Tự động ép sát lề phải và căn giữa theo chiều dọc
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            // Cách mép phải 8 pixel an toàn
+                            child: FractionallySizedBox(
+                              heightFactor: 0.86,
+                              // Tự động chiếm đúng 85% chiều cao khả dụng của mọi màn hình
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return GestureDetector(
+                                    onVerticalDragUpdate: (details) {
+                                      double letterHeight =
+                                          constraints.maxHeight /
+                                          _alphabet.length;
+                                      int index =
+                                          (details.localPosition.dy /
+                                                  letterHeight)
+                                              .floor();
+                                      if (index >= 0 &&
+                                          index < _alphabet.length) {
+                                        _cuonDenChuCai(_alphabet[index], songs);
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 26,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 8.0,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF2A2A3A,
+                                        ).withOpacity(0.95),
+                                        borderRadius: BorderRadius.circular(
+                                          20.0,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.3,
+                                            ),
+                                            blurRadius: 5,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: _alphabet.map((letter) {
+                                          bool isSelected =
+                                              _currentLetter == letter;
+                                          return Expanded(
+                                            child: GestureDetector(
+                                              onTap: () =>
+                                                  _cuonDenChuCai(letter, songs),
+                                              child: Center(
+                                                child: Text(
+                                                  letter,
+                                                  style: TextStyle(
+                                                    color: isSelected
+                                                        ? Colors.white
+                                                        : Colors.tealAccent
+                                                              .withOpacity(0.5),
+                                                    fontWeight: isSelected
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal,
+                                                    fontSize: isSelected
+                                                        ? 10
+                                                        : 8,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                              );
-                            },
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
                           ),
                         ),
+                        // KẾT THÚC PHẦN THAY THẾ
                       ],
                     );
                   },
