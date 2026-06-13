@@ -67,6 +67,11 @@ class OnlineMusicController {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            backgroundColor: Color(0xFF64B5F6),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadiusGeometry.all(Radius.circular(15.0)),
+            ),
             content: Text("Không thể phát bài hát này. Vui lòng thử bài khác."),
           ),
         );
@@ -125,7 +130,7 @@ class OnlineMusicController {
                         backgroundColor: Colors.grey[700],
                         valueColor: AlwaysStoppedAnimation<Color>(
                           isPaused
-                              ? Colors.orangeAccent
+                              ? Colors.teal
                               : Colors.tealAccent, // Đổi màu khi tạm dừng
                         ),
                         minHeight: 10,
@@ -135,9 +140,7 @@ class OnlineMusicController {
                     Text(
                       "${(progress * 100).toStringAsFixed(1)}%",
                       style: TextStyle(
-                        color: isPaused
-                            ? Colors.orangeAccent
-                            : Colors.tealAccent,
+                        color: isPaused ? Colors.teal : Colors.tealAccent,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -161,14 +164,26 @@ class OnlineMusicController {
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("Đã hủy tải bài hát!"),
-                      backgroundColor: Colors.red,
+                      backgroundColor: Color(0xFF64B5F6),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                      ),
+                      content: Text(
+                        "Đã hủy tải bài hát!",
+                        style: TextStyle(color: Colors.black54, fontSize: 22),
+                        // backgroundColor: Colors.red,
+                      ),
                     ),
                   );
                 },
                 child: const Text(
                   "Hủy",
-                  style: TextStyle(color: Colors.redAccent, fontSize: 16),
+                  style: TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               // NÚT TẠM DỪNG / TIẾP TỤC
@@ -185,8 +200,8 @@ class OnlineMusicController {
                 child: Text(
                   isPaused ? "Tiếp tục" : "Tạm dừng",
                   style: TextStyle(
-                    color: isPaused ? Colors.tealAccent : Colors.orangeAccent,
-                    fontSize: 16,
+                    color: isPaused ? Colors.tealAccent : Colors.blueGrey,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -253,7 +268,10 @@ class OnlineMusicController {
             Navigator.pop(context); // Tắt hộp thoại
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text("Đã tải xong: $safeTitle"),
+                content: Text(
+                  "Đã tải xong: $safeTitle",
+                  style: TextStyle(color: Colors.blueGrey, fontSize: 22),
+                ),
                 backgroundColor: Colors.lightBlue,
                 behavior: SnackBarBehavior
                     .floating, // Giúp SnackBar nổi lên khỏi viền dưới
