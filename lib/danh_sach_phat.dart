@@ -73,13 +73,12 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
 
     // 1. Cập nhật trạng thái bài hát đang phát ngay khi mở màn hình
     _updateCurrentlyPlaying(
-      widget.audioPlayer.sequenceState?.currentSource?.tag,
+      widget.audioPlayer.sequenceState.currentSource?.tag,
     );
 
     // 2. Lắng nghe luồng dữ liệu liên tục để cập nhật UI khi bài hát chuyển sang bài mới
     widget.audioPlayer.sequenceStateStream.listen((state) {
-      if (state == null) return;
-      _updateCurrentlyPlaying(state.currentSource?.tag);
+      _updateCurrentlyPlaying(state?.currentSource?.tag);
     });
   }
 
@@ -279,33 +278,31 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                   onTap: () async {
                     // PHẦN CODE BÊN TRONG NÀY GIỮ NGUYÊN HOÀN TOÀN NHƯ CŨ
                     try {
-                      final playlistSource = ConcatenatingAudioSource(
-                        children: _songs.map((s) {
-                          String uri = s.data.isNotEmpty
-                              ? s.data
-                              : (s.uri ??
-                                    'content://media/external/audio/media/${s.id}');
+                      final List<AudioSource> children = _songs.map((s) {
+                        String uri = s.data.isNotEmpty
+                            ? s.data
+                            : (s.uri ??
+                                  'content://media/external/audio/media/${s.id}');
 
-                          return AudioSource.uri(
-                            Uri.parse(uri),
-                            tag: MediaItem(
-                              id: s.id.toString(),
-                              title: s.title,
-                              artist: s.artist ?? "Không biết",
-                              artUri: s.albumId != null
-                                  ? Uri.parse(
-                                      'content://media/external/audio/albumart/${s.albumId}',
-                                    )
-                                  : Uri.parse(
-                                      'asset:///assets/icon/music-notes-bg.jpg',
-                                    ),
-                            ),
-                          );
-                        }).toList(),
-                      );
+                        return AudioSource.uri(
+                          Uri.parse(uri),
+                          tag: MediaItem(
+                            id: s.id.toString(),
+                            title: s.title,
+                            artist: s.artist ?? "Không biết",
+                            artUri: s.albumId != null
+                                ? Uri.parse(
+                                    'content://media/external/audio/albumart/${s.albumId}',
+                                  )
+                                : Uri.parse(
+                                    'asset:///assets/icon/music-notes-bg.jpg',
+                                  ),
+                          ),
+                        );
+                      }).toList();
 
                       await widget.audioPlayer.setAudioSource(
-                        playlistSource,
+                        ConcatenatingAudioSource(children: children),
                         initialIndex: index,
                       );
                       widget.audioPlayer.play();

@@ -40,11 +40,7 @@ class OnlineMusicController {
     try {
       var manifest = await yt.videos.streamsClient.getManifest(
         video.id,
-        ytClients: [
-          YoutubeApiClient.androidVr,
-          YoutubeApiClient.ios,
-          YoutubeApiClient.safari,
-        ],
+        ytClients: [YoutubeApiClient.androidVr],
       );
 
       var audioStreamInfo = manifest.audioOnly.withHighestBitrate();
@@ -52,7 +48,7 @@ class OnlineMusicController {
       final audioSource = AudioSource.uri(
         audioStreamInfo.url,
         tag: MediaItem(
-          id: video.id.value.hashCode.toString(),
+          id: video.id.value,
           title: video.title,
           artist: video.author,
           artUri: Uri.parse(video.thumbnails.highResUrl),
@@ -60,7 +56,7 @@ class OnlineMusicController {
         ),
       );
 
-      await audioPlayer.setAudioSource(audioSource);
+      await audioPlayer.setAudioSource(audioSource, preload: false);
       audioPlayer.play();
     } catch (e) {
       debugPrint("Lỗi khi lấy link nhạc: $e");
@@ -156,26 +152,28 @@ class OnlineMusicController {
                   isCancelled = true;
                   subscription?.cancel(); // Hủy tải
                   await fileStream?.close();
-                  if (file != null && await file!.exists()) {
-                    await file!.delete(); // Xóa file đang tải dở để dọn rác
+                  if (file != null && await file.exists()) {
+                    await file.delete(); // Xóa file đang tải dở để dọn rác
                   }
-                  if (context.mounted) Navigator.pop(context); // Đóng hộp thoại
+                  if (dialogContext.mounted)
+                    Navigator.pop(dialogContext); // Đóng hộp thoại
                   if (!completer.isCompleted) completer.complete();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: Color(0xFF64B5F6),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Color(0xFF64B5F6),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                        ),
+                        content: Text(
+                          "Đã hủy tải bài hát!",
+                          style: TextStyle(color: Colors.black54, fontSize: 22),
+                        ),
                       ),
-                      content: Text(
-                        "Đã hủy tải bài hát!",
-                        style: TextStyle(color: Colors.black54, fontSize: 22),
-                        // backgroundColor: Colors.red,
-                      ),
-                    ),
-                  );
+                    );
+                  }
                 },
                 child: const Text(
                   "Hủy",
@@ -230,8 +228,9 @@ class OnlineMusicController {
       Directory? directory;
       if (Platform.isAndroid) {
         directory = Directory('/storage/emulated/0/Download');
-        if (!await directory.exists())
+        if (!await directory.exists()) {
           directory = await getExternalStorageDirectory();
+        }
       } else {
         directory = await getApplicationDocumentsDirectory();
       }

@@ -50,18 +50,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // SỬA LỖI: Lấy dữ liệu dưới dạng MediaItem thay vì SongModel
     currentItem =
-        widget.audioPlayer.sequenceState?.currentSource?.tag as MediaItem?;
+        widget.audioPlayer.sequenceState.currentSource?.tag as MediaItem?;
     if (currentItem != null) {
-      // Vì id của MediaItem là dạng String, ta cần chuyển thành int để lấy ảnh bìa
-      _fetchArtwork(int.parse(currentItem!.id));
+      // Vì id của MediaItem là dạng String, ta cần kiểm tra xem nó có phải là số không
+      final songId = int.tryParse(currentItem!.id);
+      if (songId != null) {
+        _fetchArtwork(songId);
+      }
     }
 
     widget.audioPlayer.sequenceStateStream.listen((state) {
-      if (state != null && mounted) {
-        final newItem = state.currentSource?.tag as MediaItem?;
+      if (mounted) {
+        final newItem = state?.currentSource?.tag as MediaItem?;
         setState(() => currentItem = newItem);
         if (newItem != null) {
-          _fetchArtwork(int.parse(newItem.id));
+          final songId = int.tryParse(newItem.id);
+          if (songId != null) {
+            _fetchArtwork(songId);
+          } else {
+            // Nếu là nhạc Online (ID không phải số), xóa ảnh cũ để UI cập nhật
+            setState(() {
+              _artworkBytes = null;
+              _currentArtworkId = null;
+            });
+          }
         }
       }
     });
@@ -350,7 +362,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(artworkSize / 2),
-                  child: (_artworkBytes != null && _artworkBytes!.isNotEmpty)
+                  child:
+                      (currentItem?.artUri != null &&
+                          currentItem!.artUri.toString().startsWith('http'))
+                      ? Image.network(
+                          currentItem!.artUri.toString(),
+                          width: artworkSize,
+                          height: artworkSize,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.music_note,
+                                size: 100,
+                                color: Colors.tealAccent,
+                              ),
+                        )
+                      : (_artworkBytes != null && _artworkBytes!.isNotEmpty)
                       ? Image.memory(
                           _artworkBytes!,
                           width: artworkSize,
