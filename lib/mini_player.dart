@@ -1,6 +1,7 @@
 // file: mini_player.dart
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart'; // THÊM IMPORT NÀY
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
 import 'home_screen.dart';
@@ -37,9 +38,16 @@ class MiniPlayer extends StatelessWidget {
       valueListenable: OnlineMusicController.currentIndex,
       builder: (context, currentIndex, child) {
         // 2. TÍNH TOÁN LẠI TÊN BÀI VÀ CA SĨ BÊN TRONG NÀY
-        // Xác định xem có phải đang phát nhạc online không
+        // Kiểm tra xem bài hát hiện tại có phải là nhạc Online không dựa vào MediaItem
+        final currentItem =
+            audioPlayer.sequenceState?.currentSource?.tag as MediaItem?;
+        final isOnlineMedia = currentItem?.extras?['is_online'] == true;
+
+        // Chỉ hiển thị nhạc online nếu cả 2 điều kiện đúng:
+        // - Trình phát đang nạp nhạc Online (isOnlineMedia)
+        // - Hoặc currentIndex của controller đang hợp lệ (khác -1)
         final isOnlineNow =
-            isOnline ||
+            isOnlineMedia &&
             (currentIndex != -1 &&
                 OnlineMusicController.searchResults.isNotEmpty);
 

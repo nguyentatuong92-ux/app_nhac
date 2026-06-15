@@ -98,9 +98,10 @@ class OnlineMusicController {
       _setupLockScreenListener(audioPlayer, context);
     } catch (e) {
       debugPrint("Lỗi khi lấy link nhạc: $e");
-      if (context.mounted) {
+      // CHỈ HIỆN THÔNG BÁO LỖI NẾU KHÔNG PHẢI LÀ LỖI DO CHUYỂN BÀI NGẦM
+      if (showLoading && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Lỗi: Không thể phát bài hát này.")),
+          const SnackBar(content: Text("Lỗi: Không thể tải bài hát này.")),
         );
       }
     } finally {
@@ -118,14 +119,36 @@ class OnlineMusicController {
   ) {
     _positionSubscription?.cancel();
     _positionSubscription = player.currentIndexStream.listen((index) async {
-      // Chỉ xử lý nếu index thay đổi sang một bài mới
+      // 1. Chỉ xử lý nếu index thay đổi sang một bài mới
       if (index == null || index == currentIndex.value) return;
 
-      // Nếu trình phát tự nhảy sang bài mới (do hết bài hoặc bấm nút màn hình khóa)
-      // Chúng ta phải gọi lại playSong để lấy link thật
-      if (context.mounted) {
-        // Bật lại showLoading: true để người dùng biết app đang tải nhạc
+      // 2. QUAN TRỌNG: Kiểm tra xem nguồn nhạc HIỆN TẠI có phải là Online không
+      // Nếu người dùng đã chuyển sang nghe nhạc Offline, ta phải dừng việc lấy link YouTube
+      final currentSource = player.sequenceState?.currentSource;
+      final mediaItem = currentSource?.tag as MediaItem?;
+      final isOnlineMedia = mediaItem?.extras?['is_online'] == true;
+
+      if (!isOnlineMedia) {
+        // Nếu không phải nhạc Online, cập nhật currentIndex về -1 và thoát
+        currentIndex.value = -1;
+        return;
+      }
+
+      // 3. KIỂM TRA BÀI MỚI CÓ PHẢI LÀ LINK CHỜ (PLACEHOLDER) KHÔNG
+      // Chỉ lấy link thật nếu bài hiện tại đang là placeholder
+      final uriStr = (currentSource as UriAudioSource?)?.uri.toString() ?? "";
+      final isPlaceholder = uriStr.contains("example.com/placeholder");
+
+      if (isPlaceholder && context.mounted) {
+        // Cập nhật currentIndex để đồng bộ UI
+        currentIndex.value = index;
+
+        // Gọi playSong để lấy link thật
+        // Bật lại showLoading: true để hiển thị xoáy tròn khi chuyển bài
         playSong(index, player, context, showLoading: true);
+      } else {
+        // Nếu đã là link thật rồi thì chỉ cập nhật vị trí sáng màu trên UI
+        currentIndex.value = index;
       }
     });
   }

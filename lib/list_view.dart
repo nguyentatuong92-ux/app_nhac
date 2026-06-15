@@ -4,6 +4,7 @@ import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'cap_nhat_service.dart';
 import 'mini_player.dart';
+import 'online_music_controller.dart'; // THÊM IMPORT NÀY
 import 'tab_bai_hat.dart';
 import 'tab_danh_sach_phat.dart';
 import 'tab_online.dart';
@@ -93,6 +94,16 @@ class _ListViewScreenState extends State<ListViewScreen> {
       _onlineArtist = artist;
       _onlineThumbUrl = thumbUrl;
       currentlyPlaying = null; // Xóa trạng thái bài Offline
+    });
+  }
+
+  // HÀM XỬ LÝ KHI CHỌN NHẠC OFFLINE ĐỂ RESET TRẠNG THÁI ONLINE
+  void _handlePlayOffline(List<SongModel> songs) {
+    setState(() {
+      _danhSachDangPhat = songs;
+      _isOnlinePlaying = false;
+      // QUAN TRỌNG: Reset currentIndex của Online về -1 để đồng bộ UI
+      OnlineMusicController.currentIndex.value = -1;
     });
   }
   // ------------------------------------------------
@@ -287,13 +298,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                         _deletedSongIds.add(songId);
                       });
                     },
-                    onPlaySongs: (songs) {
-                      setState(() {
-                        _danhSachDangPhat = songs;
-                        _isOnlinePlaying =
-                            false; // MỚI THÊM: Hủy trạng thái Online khi chọn nhạc Offline
-                      });
-                    },
+                    onPlaySongs: _handlePlayOffline,
                   ),
                   TabDanhSachPhat(
                     audioQuery: _audioQuery,
