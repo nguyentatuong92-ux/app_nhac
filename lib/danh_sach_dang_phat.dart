@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'online_music_controller.dart'; // THÊM IMPORT
 
 class DanhSachDangPhat extends StatelessWidget {
   final AudioPlayer audioPlayer;
@@ -22,20 +23,13 @@ class DanhSachDangPhat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Lấy danh sách các bài hát đang được nạp vào trình phát
-    final sequence = audioPlayer.sequence;
+    // 1. Kiểm tra xem đang phát nhạc Online hay Offline
+    final currentSource = audioPlayer.sequenceState?.currentSource;
+    final mediaItem = currentSource?.tag as MediaItem?;
+    final isOnline = mediaItem?.extras?['is_online'] == true;
 
-    if (sequence == null || sequence.isEmpty) {
-      return const SizedBox(
-        height: 200,
-        child: Center(
-          child: Text(
-            'Không có bài hát nào trong hàng đợi.',
-            style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-          ),
-        ),
-      );
-    }
+    // Lấy danh sách các bài hát đang được nạp vào trình phát (Dùng cho Offline)
+    final sequence = audioPlayer.sequence;
 
     return FractionallySizedBox(
       heightFactor: 0.6, // Bảng hiện lên chiếm 60% chiều cao màn hình
@@ -46,12 +40,16 @@ class DanhSachDangPhat extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.queue_music, color: Colors.tealAccent, size: 28),
-                SizedBox(width: 10),
+              children: [
+                Icon(
+                  isOnline ? Icons.language : Icons.queue_music,
+                  color: Colors.tealAccent,
+                  size: 28,
+                ),
+                const SizedBox(width: 10),
                 Text(
-                  'Danh sách phát',
-                  style: TextStyle(
+                  isOnline ? 'Kết quả tìm kiếm Online' : 'Danh sách phát',
+                  style: const TextStyle(
                     color: Colors.tealAccent,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -62,81 +60,164 @@ class DanhSachDangPhat extends StatelessWidget {
           ),
           const Divider(color: Colors.tealAccent, height: 1),
 
-          // 2. Danh sách bài hát (Dùng StreamBuilder để theo dõi bài đang hát)
+          // 2. Danh sách bài hát
           Expanded(
-            child: StreamBuilder<int?>(
-              stream: audioPlayer.currentIndexStream,
-              builder: (context, snapshot) {
-                final currentIndex = snapshot.data ?? 0;
-
-                // THAY THẾ TOÀN BỘ BẰNG ĐOẠN MÃ NÀY
-                return ReorderableListView.builder(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  itemCount: sequence.length,
-                  // 1. Hàm xử lý khi người dùng kéo thả
-                  onReorder: (int oldIndex, int newIndex) async {
-                    if (oldIndex < newIndex) {
-                      newIndex -= 1;
-                    }
-                    try {
-                      // Ra lệnh cho trình phát nhạc thay đổi thứ tự thực tế trong hàng đợi
-                      final audioSource =
-                          audioPlayer.audioSource as ConcatenatingAudioSource?;
-                      if (audioSource != null) {
-                        await audioSource.move(oldIndex, newIndex);
-                      }
-                    } catch (e) {
-                      debugPrint("Lỗi di chuyển bài hát: $e");
-                    }
-                  },
-                  itemBuilder: (context, index) {
-                    final mediaItem = sequence[index].tag as MediaItem;
-                    final isPlaying = index == currentIndex;
-
-                    return ListTile(
-                      // 2. BẮT BUỘC CÓ KEY ĐỂ FLUTTER NHẬN DIỆN KHI KÉO THẢ
-                      key: ValueKey(mediaItem.id + index.toString()),
-
-                      leading: Icon(
-                        isPlaying ? Icons.play_circle : Icons.music_note,
-                        color: isPlaying ? Colors.tealAccent : Colors.grey,
-                        size: isPlaying ? 30 : 24,
-                      ),
-                      title: Text(
-                        mediaItem.title,
-                        style: TextStyle(
-                          color: isPlaying ? Colors.tealAccent : Colors.white,
-                          fontWeight: isPlaying
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        mediaItem.artist ?? 'Không biết',
-                        style: TextStyle(color: Colors.grey[400]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      // Thêm icon 3 gạch ở cuối để người dùng biết là có thể kéo thả
-                      trailing: const Icon(
-                        Icons.drag_handle,
-                        color: Colors.grey,
-                      ),
-                      onTap: () {
-                        // Khi bấm vào bài nào, nhảy ngay đến bài đó và phát
-                        audioPlayer.seek(Duration.zero, index: index);
-                        audioPlayer.play();
-                      },
-                    );
-                  },
-                );
-              },
-            ),
+            child: isOnline
+                ? _buildOnlineList(context)
+                : _buildOfflineList(sequence, audioPlayer),
           ),
         ],
       ),
+    );
+  }
+
+  // GIAO DIỆN DANH SÁCH ONLINE
+  Widget _buildOnlineList(BuildContext context) {
+    return ValueListenableBuilder<int>(
+      valueListenable: OnlineMusicController.currentIndex,
+      builder: (context, currentIndex, child) {
+        if (OnlineMusicController.searchResults.isEmpty) {
+          return const Center(
+            child: Text(
+              "Không có danh sách tìm kiếm.",
+              style: TextStyle(color: Colors.grey),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 20),
+          itemCount: OnlineMusicController.searchResults.length,
+          itemBuilder: (context, index) {
+            final video = OnlineMusicController.searchResults[index];
+            final isPlaying = index == currentIndex;
+
+            // Định dạng thời lượng
+            String durationStr = "--:--";
+            if (video.duration != null) {
+              String minutes = video.duration!.inMinutes.toString().padLeft(
+                2,
+                '0',
+              );
+              String seconds = (video.duration!.inSeconds % 60)
+                  .toString()
+                  .padLeft(2, '0');
+              durationStr = "$minutes:$seconds";
+            }
+
+            return ListTile(
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  video.thumbnails.mediumResUrl,
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Icon(Icons.music_note, color: Colors.grey),
+                ),
+              ),
+              title: Text(
+                video.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isPlaying ? Colors.tealAccent : Colors.white,
+                  fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              subtitle: Text(
+                "${video.author} • $durationStr",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isPlaying ? Colors.tealAccent : Colors.grey[400],
+                ),
+              ),
+              trailing: isPlaying
+                  ? const Icon(Icons.equalizer, color: Colors.tealAccent)
+                  : null,
+              onTap: () {
+                OnlineMusicController.playSong(index, audioPlayer, context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // GIAO DIỆN DANH SÁCH OFFLINE (GIỮ NGUYÊN LOGIC CŨ)
+  Widget _buildOfflineList(
+    List<IndexedAudioSource>? sequence,
+    AudioPlayer audioPlayer,
+  ) {
+    if (sequence == null || sequence.isEmpty) {
+      return const Center(
+        child: Text(
+          'Không có bài hát nào trong hàng đợi.',
+          style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+        ),
+      );
+    }
+
+    return StreamBuilder<int?>(
+      stream: audioPlayer.currentIndexStream,
+      builder: (context, snapshot) {
+        final currentIndex = snapshot.data ?? 0;
+
+        return ReorderableListView.builder(
+          padding: const EdgeInsets.only(bottom: 100),
+          itemCount: sequence.length,
+          onReorder: (int oldIndex, int newIndex) async {
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            try {
+              final audioSource =
+                  audioPlayer.audioSource as ConcatenatingAudioSource?;
+              if (audioSource != null) {
+                await audioSource.move(oldIndex, newIndex);
+              }
+            } catch (e) {
+              debugPrint("Lỗi di chuyển bài hát: $e");
+            }
+          },
+          itemBuilder: (context, index) {
+            final itemMedia = sequence[index].tag as MediaItem;
+            final isPlaying = index == currentIndex;
+
+            return ListTile(
+              key: ValueKey(itemMedia.id + index.toString()),
+              leading: Icon(
+                isPlaying ? Icons.play_circle : Icons.music_note,
+                color: isPlaying ? Colors.tealAccent : Colors.grey,
+                size: isPlaying ? 30 : 24,
+              ),
+              title: Text(
+                itemMedia.title,
+                style: TextStyle(
+                  color: isPlaying ? Colors.tealAccent : Colors.white,
+                  fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(
+                itemMedia.artist ?? 'Không biết',
+                style: TextStyle(color: Colors.grey[400]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: const Icon(Icons.drag_handle, color: Colors.grey),
+              onTap: () {
+                audioPlayer.seek(Duration.zero, index: index);
+                audioPlayer.play();
+              },
+            );
+          },
+        );
+      },
     );
   }
 }

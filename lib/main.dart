@@ -12,8 +12,10 @@ Future<void> main() async {
     androidNotificationChannelId: 'com.example.app_nhac.channel.audio',
     androidNotificationChannelName: 'Phát nhạc',
     androidNotificationOngoing: true,
-    // Cập nhật trỏ tới file ảnh trong thư mục drawable (không cần ghi đuôi .png)
     androidNotificationIcon: 'mipmap/launcher_icon',
+    // THÊM DÒNG NÀY ĐỂ HIỆN NÚT TRÊN MÀN HÌNH KHÓA
+    androidShowNotificationBadge: true,
+    androidStopForegroundOnPause: true,
   );
   runApp(const MyApp());
 }

@@ -16,68 +16,118 @@ class OnlineMusicController {
   // Dùng ValueNotifier để TabOnline tự động sáng màu bài đang hát
   static ValueNotifier<int> currentIndex = ValueNotifier<int>(-1);
 
+  // BIẾN ĐỂ KIỂM SOÁT VIỆC TỰ ĐỘNG LẤY LINK KHI QUA BÀI
+  static StreamSubscription? _positionSubscription;
+
   // Hàm phát nhạc
   static Future<void> playSong(
     int index,
     AudioPlayer audioPlayer,
-    BuildContext context,
-  ) async {
+    BuildContext context, {
+    bool showLoading = true, // Thêm tham số để ẩn/hiện xoáy tròn
+  }) async {
     if (index < 0 || index >= searchResults.length) return;
 
-    // 1. HIỂN THỊ XOÁY TRÒN TẢI DỮ LIỆU
-    showDialog(
-      context: context,
-      barrierDismissible:
-          false, // Ngăn người dùng bấm ra ngoài để tắt màn hình tải
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Colors.tealAccent),
-      ),
-    );
+    // 1. HIỂN THỊ XOÁY TRÒN TẢI DỮ LIỆU (Nếu yêu cầu)
+    if (showLoading && context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.tealAccent),
+        ),
+      );
+    }
 
-    currentIndex.value = index; // Cập nhật vị trí
+    currentIndex.value = index;
     final video = searchResults[index];
 
     try {
+      // Lấy link nhạc thật từ YouTube
       var manifest = await yt.videos.streamsClient.getManifest(
         video.id,
         ytClients: [YoutubeApiClient.androidVr],
       );
-
       var audioStreamInfo = manifest.audioOnly.withHighestBitrate();
 
-      final audioSource = AudioSource.uri(
-        audioStreamInfo.url,
-        tag: MediaItem(
-          id: video.id.value,
-          title: video.title,
-          artist: video.author,
-          artUri: Uri.parse(video.thumbnails.highResUrl),
-          extras: {'is_online': true},
-        ),
-      );
+      // TẠO DANH SÁCH PHÁT (CONCATENATING) ĐỂ HIỆN NÚT TRÊN MÀN HÌNH KHÓA
+      List<AudioSource> sources = [];
+      for (int i = 0; i < searchResults.length; i++) {
+        final v = searchResults[i];
 
-      await audioPlayer.setAudioSource(audioSource, preload: false);
+        if (i == index) {
+          // Bài hiện tại: Dùng link thật
+          sources.add(
+            AudioSource.uri(
+              audioStreamInfo.url,
+              tag: MediaItem(
+                id: v.id.value,
+                title: v.title,
+                artist: v.author,
+                duration: v.duration,
+                artUri: Uri.parse(v.thumbnails.highResUrl),
+                extras: {'is_online': true, 'index': i},
+              ),
+            ),
+          );
+        } else {
+          // Các bài khác: Dùng link "chờ" (Phải khác nhau URI để không bị cache lỗi)
+          sources.add(
+            AudioSource.uri(
+              Uri.parse("https://example.com/placeholder_${i}.mp3"),
+              tag: MediaItem(
+                id: v.id.value,
+                title: v.title,
+                artist: v.author,
+                duration: v.duration,
+                artUri: Uri.parse(v.thumbnails.highResUrl),
+                extras: {'is_online': true, 'index': i},
+              ),
+            ),
+          );
+        }
+      }
+
+      final playlist = ConcatenatingAudioSource(children: sources);
+
+      // Nạp danh sách vào Player và nhảy đến đúng bài
+      await audioPlayer.setAudioSource(playlist, initialIndex: index);
       audioPlayer.play();
+
+      // THIẾT LẬP TỰ ĐỘNG CẬP NHẬT LINK KHI NGƯỜI DÙNG BẤM NEXT TRÊN MÀN HÌNH KHÓA
+      _setupLockScreenListener(audioPlayer, context);
     } catch (e) {
       debugPrint("Lỗi khi lấy link nhạc: $e");
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Color(0xFF64B5F6),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadiusGeometry.all(Radius.circular(15.0)),
-            ),
-            content: Text("Không thể phát bài hát này. Vui lòng thử bài khác."),
-          ),
+          const SnackBar(content: Text("Lỗi: Không thể phát bài hát này.")),
         );
       }
     } finally {
-      // 2. ĐÓNG XOÁY TRÒN KHI ĐÃ TẢI XONG (HOẶC BỊ LỖI)
-      if (context.mounted) {
+      // Đóng xoáy tròn nếu đang hiển thị
+      if (showLoading && context.mounted) {
         Navigator.pop(context);
       }
     }
+  }
+
+  // HÀM LẮNG NGHE KHI NGƯỜI DÙNG BẤM NEXT/PREV TRÊN MÀN HÌNH KHÓA
+  static void _setupLockScreenListener(
+    AudioPlayer player,
+    BuildContext context,
+  ) {
+    _positionSubscription?.cancel();
+    _positionSubscription = player.currentIndexStream.listen((index) async {
+      // Chỉ xử lý nếu index thay đổi sang một bài mới
+      if (index == null || index == currentIndex.value) return;
+
+      // Nếu trình phát tự nhảy sang bài mới (do hết bài hoặc bấm nút màn hình khóa)
+      // Chúng ta phải gọi lại playSong để lấy link thật
+      if (context.mounted) {
+        // Bật lại showLoading: true để người dùng biết app đang tải nhạc
+        playSong(index, player, context, showLoading: true);
+      }
+    });
   }
 
   // Hàm tải bài hát về máy (Có nút Tạm dừng / Hủy)
@@ -337,7 +387,8 @@ class OnlineMusicController {
   // Chuyển bài tiếp theo
   static Future<void> playNext(AudioPlayer player, BuildContext context) async {
     if (currentIndex.value < searchResults.length - 1) {
-      await playSong(currentIndex.value + 1, player, context);
+      // Vì đã có hàng đợi, ta chỉ cần gọi seekToNext, bộ lắng nghe sẽ tự lấy link thật
+      player.seekToNext();
     }
   }
 
@@ -347,7 +398,10 @@ class OnlineMusicController {
     BuildContext context,
   ) async {
     if (currentIndex.value > 0) {
-      await playSong(currentIndex.value - 1, player, context);
+      player.seekToPrevious();
     }
   }
+
+  // Ghi chú: Đã gỡ bỏ setupAutoNext cũ vì dùng cơ chế hàng đợi ConcatenatingAudioSource
+  // của just_audio kết hợp với _setupLockScreenListener giúp chuyển bài tự động mượt mà hơn.
 }

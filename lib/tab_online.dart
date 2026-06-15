@@ -44,6 +44,18 @@ class _TabOnlineState extends State<TabOnline>
     }
   }
 
+  // Hàm định dạng thời gian Duration -> mm:ss
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return "--:--";
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String minutes = twoDigits(duration.inMinutes.remainder(60));
+    String seconds = twoDigits(duration.inSeconds.remainder(60));
+    if (duration.inHours > 0) {
+      return "${duration.inHours}:$minutes:$seconds";
+    }
+    return "$minutes:$seconds";
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -133,7 +145,7 @@ class _TabOnlineState extends State<TabOnline>
                             ),
                           ),
                           subtitle: Text(
-                            video.author,
+                            "${video.author} • ${_formatDuration(video.duration)}",
                             style: TextStyle(
                               color: isSelected
                                   ? Colors.tealAccent
