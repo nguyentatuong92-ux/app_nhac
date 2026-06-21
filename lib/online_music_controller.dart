@@ -95,11 +95,19 @@ class OnlineMusicController {
         (currentQueueType.value == queueType ? onlineQueue : searchResults);
 
     if (index < 0 || index >= queue.length) return;
-    if (_isProcessing) return;
+
+    // Nếu đang xử lý bài hiện tại rồi thì bỏ qua, nhưng nếu là bài khác thì cho phép ngắt
+    if (_isProcessing && currentIndex.value == index) {
+      debugPrint("Đang xử lý bài hát này rồi: index $index");
+      return;
+    }
 
     _isProcessing = true;
     bool dialogOpened = false;
+    debugPrint("Bắt đầu playSong: index $index, type $queueType");
 
+    // Đã xóa phần tự hiện dialog nếu showLoading = true để thay bằng loading trên ảnh bìa
+    // Nếu bạn muốn giữ lại dialog khi chọn trực tiếp bài hát, hãy giữ lại đoạn code này:
     if (showLoading && context.mounted) {
       dialogOpened = true;
       showDialog(
@@ -115,7 +123,11 @@ class OnlineMusicController {
 
     currentIndex.value = index;
     final video = queue[index];
-    onlineQueue = List.from(queue);
+
+    // CẬP NHẬT: Nếu queueType khác loại hiện tại, phải cập nhật onlineQueue trước khi xử lý logic isSameQueue
+    if (currentQueueType.value != queueType) {
+      onlineQueue = List.from(queue);
+    }
 
     try {
       var manifest = await yt.videos.streamsClient
@@ -149,10 +161,8 @@ class OnlineMusicController {
         await currentPlaylist.removeAt(index);
         await currentPlaylist.insert(index, realSource);
 
-        // Nếu trình phát chưa ở đúng index thì nhảy tới
-        if (audioPlayer.currentIndex != index) {
-          await audioPlayer.seek(Duration.zero, index: index);
-        }
+        // Đảm bảo nhảy tới đúng bài và phát
+        await audioPlayer.seek(Duration.zero, index: index);
       } else {
         // Nếu danh sách mới hoặc khác loại thì nạp lại toàn bộ
         currentQueueType.value = queueType;
@@ -191,10 +201,11 @@ class OnlineMusicController {
         dialogOpened = false;
       }
 
+      debugPrint("Đã lấy được link thật cho bài $index. Đang bắt đầu phát...");
       _setupLockScreenListener(audioPlayer, context);
       await audioPlayer.play();
     } catch (e) {
-      debugPrint("Lỗi khi lấy link nhạc: $e");
+      debugPrint("Lỗi khi lấy link nhạc cho bài $index: $e");
     } finally {
       _isProcessing = false;
       if (dialogOpened && context.mounted) {

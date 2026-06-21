@@ -352,45 +352,78 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               const Spacer(),
 
-              Container(
-                width: artworkSize,
-                height: artworkSize,
-                decoration: BoxDecoration(
-                  color: Color(0xFF4B5563),
-                  borderRadius: BorderRadius.circular(artworkSize / 2),
-                  border: Border.all(color: Colors.tealAccent, width: 3),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(artworkSize / 2),
-                  child:
-                      (currentItem?.artUri != null &&
-                          currentItem!.artUri.toString().startsWith('http'))
-                      ? Image.network(
-                          currentItem!.artUri.toString(),
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: artworkSize,
+                    height: artworkSize,
+                    decoration: BoxDecoration(
+                      color: Color(0xFF4B5563),
+                      borderRadius: BorderRadius.circular(artworkSize / 2),
+                      border: Border.all(color: Colors.tealAccent, width: 3),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(artworkSize / 2),
+                      child:
+                          (currentItem?.artUri != null &&
+                              currentItem!.artUri.toString().startsWith('http'))
+                          ? Image.network(
+                              currentItem!.artUri.toString(),
+                              width: artworkSize,
+                              height: artworkSize,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                    Icons.music_note,
+                                    size: 100,
+                                    color: Colors.tealAccent,
+                                  ),
+                            )
+                          : (_artworkBytes != null && _artworkBytes!.isNotEmpty)
+                          ? Image.memory(
+                              _artworkBytes!,
+                              width: artworkSize,
+                              height: artworkSize,
+                              fit: BoxFit.cover,
+                              gaplessPlayback: true,
+                            )
+                          : const Icon(
+                              Icons.music_note,
+                              size: 100,
+                              color: Colors.tealAccent,
+                            ),
+                    ),
+                  ),
+                  // MỚI THÊM: Loading indicator khi đang lấy link nhạc Online
+                  StreamBuilder<ProcessingState>(
+                    stream: widget.audioPlayer.processingStateStream,
+                    builder: (context, snapshot) {
+                      final state = snapshot.data;
+                      // Hiển thị vòng xoáy khi đang loading, buffering hoặc idle (đang nạp nguồn mới)
+                      if (state == ProcessingState.loading ||
+                          state == ProcessingState.buffering ||
+                          state == ProcessingState.idle) {
+                        return Container(
                           width: artworkSize,
                           height: artworkSize,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.music_note,
-                                size: 100,
-                                color: Colors.tealAccent,
-                              ),
-                        )
-                      : (_artworkBytes != null && _artworkBytes!.isNotEmpty)
-                      ? Image.memory(
-                          _artworkBytes!,
-                          width: artworkSize,
-                          height: artworkSize,
-                          fit: BoxFit.cover,
-                          gaplessPlayback: true,
-                        )
-                      : const Icon(
-                          Icons.music_note,
-                          size: 100,
-                          color: Colors.tealAccent,
-                        ),
-                ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(
+                              artworkSize / 2,
+                            ),
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.tealAccent,
+                            ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
               ),
 
               const SizedBox(height: 20),
