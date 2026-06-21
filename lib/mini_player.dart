@@ -1,82 +1,28 @@
-// file: mini_player.dart
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart'; // THÊM IMPORT NÀY
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
 import 'home_screen.dart';
-import 'online_music_controller.dart';
+import 'music_controller.dart';
 
 class MiniPlayer extends StatelessWidget {
-  // GIỮ LẠI CHO NHẠC OFFLINE
-  final SongModel? currentSong;
-
-  // THÊM CÁC THAM SỐ CHO NHẠC ONLINE
-  final bool isOnline;
-  final String? onlineTitle;
-  final String? onlineArtist;
-  final String? onlineThumbUrl;
-
-  final AudioPlayer audioPlayer;
-  final VoidCallback onRefresh;
-
-  const MiniPlayer({
-    super.key,
-    this.currentSong, // Chuyển thành có thể null
-    this.isOnline = false, // Mặc định là offline
-    this.onlineTitle,
-    this.onlineArtist,
-    this.onlineThumbUrl,
-    required this.audioPlayer,
-    required this.onRefresh,
-  });
+  const MiniPlayer({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 1. Dùng ValueListenableBuilder bọc bên ngoài cùng để lắng nghe sự thay đổi
-    return ValueListenableBuilder<int>(
-      valueListenable: OnlineMusicController.currentIndex,
-      builder: (context, currentIndex, child) {
-        // 2. TÍNH TOÁN LẠI TÊN BÀI VÀ CA SĨ BÊN TRONG NÀY
-        // Kiểm tra xem bài hát hiện tại có phải là nhạc Online không dựa vào MediaItem
-        final currentItem =
-            audioPlayer.sequenceState?.currentSource?.tag as MediaItem?;
-        final isOnlineMedia = currentItem?.extras?['is_online'] == true;
+    final MusicController musicController = MusicController();
 
-        // Chỉ hiển thị nhạc online nếu cả 2 điều kiện đúng:
-        // - Trình phát đang nạp nhạc Online (isOnlineMedia)
-        // - Hoặc currentIndex của controller đang hợp lệ (khác -1)
-        final isOnlineNow =
-            isOnlineMedia &&
-            (currentIndex != -1 &&
-                OnlineMusicController.onlineQueue.isNotEmpty);
+    return ValueListenableBuilder<MediaItem?>(
+      valueListenable: musicController.currentItem,
+      builder: (context, item, _) {
+        if (item == null) return const SizedBox.shrink();
 
-        // Lấy thông tin video hiện tại nếu đang phát online
-        final video =
-            (isOnlineNow &&
-                currentIndex >= 0 &&
-                currentIndex < OnlineMusicController.onlineQueue.length)
-            ? OnlineMusicController.onlineQueue[currentIndex]
-            : null;
-
-        // Cập nhật lại title và artist dựa theo nguồn nhạc
-        final title = isOnlineNow && video != null
-            ? video.title
-            : (currentSong?.title ?? "Không rõ tên bài");
-
-        final artist = isOnlineNow && video != null
-            ? video.author
-            : (currentSong?.artist ?? "Không biết");
-
-        // 3. TRẢ VỀ GIAO DIỆN GESTURE DETECTOR (Giữ nguyên code cũ của bạn bên trong)
         return GestureDetector(
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => HomeScreen(audioPlayer: audioPlayer),
-              ),
-            ).then((_) => onRefresh());
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+            );
           },
           child: Container(
             height: 75,
@@ -91,7 +37,6 @@ class MiniPlayer extends StatelessWidget {
                   child: Row(
                     children: [
                       const SizedBox(width: 10),
-                      // ẢNH BÌA SẼ ĐƯỢC CẬP NHẬT Ở HÀM _buildArtwork BÊN DƯỚI
                       Container(
                         width: 46,
                         height: 46,
@@ -100,17 +45,16 @@ class MiniPlayer extends StatelessWidget {
                           color: const Color(0xFF4B5563),
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: _buildArtwork(),
+                        child: _buildArtwork(item),
                       ),
                       const SizedBox(width: 12),
-                      // PHẦN CHỮ
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             TextScroll(
-                              title,
+                              item.title,
                               mode: TextScrollMode.bouncing,
                               velocity: const Velocity(
                                 pixelsPerSecond: Offset(30, 0),
@@ -123,7 +67,7 @@ class MiniPlayer extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              artist,
+                              item.artist ?? "Không biết",
                               style: const TextStyle(
                                 color: Colors.tealAccent,
                                 fontSize: 12,
@@ -140,51 +84,36 @@ class MiniPlayer extends StatelessWidget {
                           color: Colors.tealAccent,
                         ),
                         onPressed: () {
-                          // SỬA Ở ĐÂY: Dùng isOnlineNow thay vì isOnline
-                          if (isOnlineNow) {
-                            OnlineMusicController.playPrevious(
-                              audioPlayer,
-                              context,
-                            );
-                          } else if (audioPlayer.hasPrevious) {
-                            audioPlayer.seekToPrevious();
+                          if (musicController.audioPlayer.hasPrevious) {
+                            musicController.audioPlayer.seekToPrevious();
                           }
                         },
                       ),
-                      // NÚT PLAY/PAUSE
-                      StreamBuilder<bool>(
-                        stream: audioPlayer.playingStream,
-                        builder: (context, snapshot) {
-                          bool isPlaying = snapshot.data ?? false;
+                      ValueListenableBuilder<bool>(
+                        valueListenable: musicController.isPlaying,
+                        builder: (context, playing, _) {
                           return IconButton(
                             icon: Icon(
-                              isPlaying ? Icons.pause : Icons.play_arrow,
+                              playing ? Icons.pause : Icons.play_arrow,
                               color: Colors.tealAccent,
                               size: 35,
                             ),
                             onPressed: () {
-                              isPlaying
-                                  ? audioPlayer.pause()
-                                  : audioPlayer.play();
+                              playing
+                                  ? musicController.audioPlayer.pause()
+                                  : musicController.audioPlayer.play();
                             },
                           );
                         },
                       ),
-                      // NÚT QUA BÀI
                       IconButton(
                         icon: const Icon(
                           Icons.skip_next,
                           color: Colors.tealAccent,
                         ),
                         onPressed: () {
-                          // SỬA Ở ĐÂY: Dùng isOnlineNow thay vì isOnline
-                          if (isOnlineNow) {
-                            OnlineMusicController.playNext(
-                              audioPlayer,
-                              context,
-                            );
-                          } else if (audioPlayer.hasNext) {
-                            audioPlayer.seekToNext();
+                          if (musicController.audioPlayer.hasNext) {
+                            musicController.audioPlayer.seekToNext();
                           }
                         },
                       ),
@@ -192,59 +121,7 @@ class MiniPlayer extends StatelessWidget {
                     ],
                   ),
                 ),
-
-                // THANH TIẾN TRÌNH TUA NHẠC
-                StreamBuilder<Duration>(
-                  stream: audioPlayer.positionStream,
-                  builder: (context, snapshot) {
-                    final position = snapshot.data ?? Duration.zero;
-                    final duration = audioPlayer.duration ?? Duration.zero;
-
-                    double progress = 0.0;
-                    if (duration.inMilliseconds > 0) {
-                      progress =
-                          position.inMilliseconds / duration.inMilliseconds;
-                    }
-
-                    return LayoutBuilder(
-                      builder: (context, constraints) {
-                        return GestureDetector(
-                          onTapDown: (details) {
-                            if (duration.inMilliseconds > 0) {
-                              final tapPosition = details.localPosition.dx;
-                              final percentage =
-                                  tapPosition / constraints.maxWidth;
-                              final seekPosition = Duration(
-                                milliseconds:
-                                    (duration.inMilliseconds * percentage)
-                                        .round(),
-                              );
-                              audioPlayer.seek(seekPosition);
-                            }
-                          },
-                          child: Container(
-                            height: 12,
-                            color: Colors.transparent,
-                            alignment: Alignment.bottomCenter,
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                bottom: Radius.circular(35),
-                              ),
-                              child: LinearProgressIndicator(
-                                value: progress.clamp(0.0, 1.0),
-                                backgroundColor: Colors.transparent,
-                                valueColor: const AlwaysStoppedAnimation<Color>(
-                                  Colors.tealAccent,
-                                ),
-                                minHeight: 3,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                _buildProgressBar(musicController),
               ],
             ),
           ),
@@ -253,33 +130,59 @@ class MiniPlayer extends StatelessWidget {
     );
   }
 
-  // Hàm phụ trợ để render ảnh cho gọn code
-  Widget _buildArtwork() {
-    // Lấy vị trí bài hát online đang phát
-    final currentIndex = OnlineMusicController.currentIndex.value;
-
-    // Nếu đang phát nhạc online và danh sách có bài hát
-    if ((isOnline || currentIndex != -1) &&
-        currentIndex >= 0 &&
-        currentIndex < OnlineMusicController.onlineQueue.length) {
-      final thumbUrl =
-          OnlineMusicController.onlineQueue[currentIndex].thumbnails.highResUrl;
-      return Image.network(thumbUrl, fit: BoxFit.cover);
+  Widget _buildArtwork(MediaItem item) {
+    if (item.extras?['is_online'] == true) {
+      return Image.network(
+        item.artUri?.toString() ?? "",
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.music_note, color: Colors.tealAccent),
+      );
+    } else {
+      return QueryArtworkWidget(
+        id: int.tryParse(item.id) ?? 0,
+        type: ArtworkType.AUDIO,
+        artworkFit: BoxFit.cover,
+        nullArtworkWidget: const Icon(
+          Icons.music_note,
+          color: Colors.tealAccent,
+        ),
+      );
     }
-    // Nếu phát nhạc offline
-    else {
-      if (currentSong != null) {
-        return QueryArtworkWidget(
-          id: currentSong!.id,
-          type: ArtworkType.AUDIO,
-          artworkFit: BoxFit.cover,
-          nullArtworkWidget: const Icon(
-            Icons.music_note,
-            color: Colors.tealAccent,
+  }
+
+  Widget _buildProgressBar(MusicController musicController) {
+    return StreamBuilder<Duration>(
+      stream: musicController.audioPlayer.positionStream,
+      builder: (context, snapshot) {
+        final position = snapshot.data ?? Duration.zero;
+        final duration = musicController.audioPlayer.duration ?? Duration.zero;
+        double progress = 0.0;
+        if (duration.inMilliseconds > 0) {
+          progress = (position.inMilliseconds / duration.inMilliseconds).clamp(
+            0.0,
+            1.0,
+          );
+        }
+
+        return Container(
+          height: 3,
+          alignment: Alignment.bottomCenter,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(35),
+            ),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.transparent,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Colors.tealAccent,
+              ),
+              minHeight: 3,
+            ),
           ),
         );
-      }
-      return const Icon(Icons.music_note, color: Colors.tealAccent);
-    }
+      },
+    );
   }
 }

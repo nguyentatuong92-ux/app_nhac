@@ -11,7 +11,7 @@ class OnlineMusicController {
   static final YoutubeExplode yt = YoutubeExplode();
 
   static List<Video> searchResults = [];
-  static List<Video> onlinePlaylist = [];
+  static ValueNotifier<List<Video>> onlinePlaylist = ValueNotifier([]);
   static List<Video> onlineQueue = [];
 
   static ValueNotifier<int> currentIndex = ValueNotifier<int>(-1);
@@ -64,10 +64,6 @@ class OnlineMusicController {
 
     _playerStateSubscription?.cancel();
     _playerStateSubscription = player.playerStateStream.listen((state) {
-      // Khi một bài hát hát xong, just_audio tự động chuyển sang index tiếp theo.
-      // Nếu bài tiếp theo là placeholder, listener ở currentIndexStream bên trên sẽ lo việc tải nhạc.
-      // Tuy nhiên, nếu bài hát cuối cùng kết thúc và có chế độ lặp lại (LoopMode.all),
-      // ta cũng cần đảm bảo bài đầu tiên được nạp lại link thật.
       if (state.processingState == ProcessingState.completed) {
         if (player.loopMode == LoopMode.all && onlineQueue.isNotEmpty) {
           playSong(
@@ -96,7 +92,6 @@ class OnlineMusicController {
 
     if (index < 0 || index >= queue.length) return;
 
-    // Nếu đang xử lý bài hiện tại rồi thì bỏ qua, nhưng nếu là bài khác thì cho phép ngắt
     if (_isProcessing && currentIndex.value == index) {
       debugPrint("Đang xử lý bài hát này rồi: index $index");
       return;
@@ -106,8 +101,6 @@ class OnlineMusicController {
     bool dialogOpened = false;
     debugPrint("Bắt đầu playSong: index $index, type $queueType");
 
-    // Đã xóa phần tự hiện dialog nếu showLoading = true để thay bằng loading trên ảnh bìa
-    // Nếu bạn muốn giữ lại dialog khi chọn trực tiếp bài hát, hãy giữ lại đoạn code này:
     if (showLoading && context.mounted) {
       dialogOpened = true;
       showDialog(
@@ -124,7 +117,6 @@ class OnlineMusicController {
     currentIndex.value = index;
     final video = queue[index];
 
-    // CẬP NHẬT: Nếu queueType khác loại hiện tại, phải cập nhật onlineQueue trước khi xử lý logic isSameQueue
     if (currentQueueType.value != queueType) {
       onlineQueue = List.from(queue);
     }
@@ -148,23 +140,15 @@ class OnlineMusicController {
         ),
       );
 
-      final currentPlaylist =
-          audioPlayer.audioSource as ConcatenatingAudioSource?;
-
       bool isSameQueue =
           currentQueueType.value == queueType &&
-          currentPlaylist != null &&
-          currentPlaylist.length == onlineQueue.length;
+          audioPlayer.sequence.length == onlineQueue.length;
 
       if (isSameQueue) {
-        // Chỉ cập nhật bài hát tại vị trí index nếu đã có danh sách
-        await currentPlaylist.removeAt(index);
-        await currentPlaylist.insert(index, realSource);
-
-        // Đảm bảo nhảy tới đúng bài và phát
+        await audioPlayer.removeAudioSourceAt(index);
+        await audioPlayer.insertAudioSource(index, realSource);
         await audioPlayer.seek(Duration.zero, index: index);
       } else {
-        // Nếu danh sách mới hoặc khác loại thì nạp lại toàn bộ
         currentQueueType.value = queueType;
         List<AudioSource> sources = [];
         for (int i = 0; i < onlineQueue.length; i++) {
@@ -187,15 +171,13 @@ class OnlineMusicController {
             );
           }
         }
-        final playlist = ConcatenatingAudioSource(children: sources);
-        await audioPlayer.setAudioSource(
-          playlist,
+        await audioPlayer.setAudioSources(
+          sources,
           initialIndex: index,
           preload: true,
         );
       }
 
-      // Đóng dialog ngay khi nạp xong dữ liệu (không đợi play() xong)
       if (dialogOpened && context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         dialogOpened = false;
@@ -451,7 +433,7 @@ class OnlineMusicController {
     BuildContext context,
     AudioPlayer audioPlayer,
   ) {
-    bool exists = onlinePlaylist.any((v) => v.id.value == video.id.value);
+    bool exists = onlinePlaylist.value.any((v) => v.id.value == video.id.value);
     if (exists) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -460,19 +442,17 @@ class OnlineMusicController {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15.0),
           ),
-          content: Text("Bài hát đã có trong danh sách Online!"),
-          duration: Duration(seconds: 1),
+          content: const Text("Bài hát đã có trong danh sách Online!"),
+          duration: const Duration(seconds: 1),
         ),
       );
       return;
     }
 
-    onlinePlaylist.add(video);
+    onlinePlaylist.value = [...onlinePlaylist.value, video];
 
-    // --- MỚI THÊM: ĐỒNG BỘ VÀO HÀNG ĐỢI ĐANG PHÁT ---
     if (currentQueueType.value == "playlist") {
-      final playlist = audioPlayer.audioSource as ConcatenatingAudioSource?;
-      if (playlist != null) {
+      if (audioPlayer.sequence.isNotEmpty) {
         onlineQueue.add(video);
         final index = onlineQueue.length - 1;
         final source = AudioSource.uri(
@@ -486,66 +466,60 @@ class OnlineMusicController {
             extras: {'is_online': true, 'index': index},
           ),
         );
-        playlist.add(source);
+        audioPlayer.addAudioSource(source);
       }
     }
-    // -----------------------------------------------
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: const Color(0xFF64B5F6),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(
-            15.0,
-          ), // Điều chỉnh độ bo góc tại đây
+          borderRadius: BorderRadius.circular(15.0),
         ),
-        content: Text("Đã thêm vào danh sách Online!"),
-        duration: Duration(seconds: 1),
+        content: const Text("Đã thêm vào danh sách Online!"),
+        duration: const Duration(seconds: 1),
       ),
     );
   }
 
   static Future<void> removeFromOnlinePlaylist(int index) async {
-    if (index >= 0 && index < onlinePlaylist.length) {
-      onlinePlaylist.removeAt(index);
+    if (index >= 0 && index < onlinePlaylist.value.length) {
+      final newList = List<Video>.from(onlinePlaylist.value);
+      newList.removeAt(index);
+      onlinePlaylist.value = newList;
     }
   }
 
-  // --- MỚI THÊM: Đồng bộ xóa từ Playlist lưu trữ vào Queue đang phát ---
   static Future<void> removeFromSavedAndActiveQueue(
     int index,
     AudioPlayer player,
   ) async {
-    if (index < 0 || index >= onlinePlaylist.length) return;
+    if (index < 0 || index >= onlinePlaylist.value.length) return;
 
-    final videoToRemove = onlinePlaylist[index];
-    onlinePlaylist.removeAt(index);
+    final videoToRemove = onlinePlaylist.value[index];
+    final newList = List<Video>.from(onlinePlaylist.value);
+    newList.removeAt(index);
+    onlinePlaylist.value = newList;
 
-    // Nếu đang phát từ playlist, ta cần xóa bài hát này khỏi hàng đợi thực tế của trình phát
     if (currentQueueType.value == "playlist") {
-      final playlist = player.audioSource as ConcatenatingAudioSource?;
-      if (playlist != null) {
-        // Tìm vị trí của bài hát trong onlineQueue (hàng đợi thực tế của player)
-        int queueIndex = onlineQueue.indexWhere(
-          (v) => v.id.value == videoToRemove.id.value,
-        );
-        if (queueIndex != -1 && queueIndex < playlist.length) {
-          onlineQueue.removeAt(queueIndex);
-          await playlist.removeAt(queueIndex);
-          currentIndex.value = player.currentIndex ?? -1;
-        }
+      int queueIndex = onlineQueue.indexWhere(
+        (v) => v.id.value == videoToRemove.id.value,
+      );
+      if (queueIndex != -1 && queueIndex < player.sequence.length) {
+        onlineQueue.removeAt(queueIndex);
+        await player.removeAudioSourceAt(queueIndex);
+        currentIndex.value = player.currentIndex ?? -1;
       }
     }
   }
 
-  // --- MỚI THÊM: Đồng bộ khi xóa từ Queue đang phát vào Playlist lưu trữ ---
   static Future<void> syncRemoveFromPlaylist(MediaItem item) async {
-    // Tìm và xóa bài hát trong danh sách lưu trữ dựa trên ID (video.id.value)
-    onlinePlaylist.removeWhere((v) => v.id.value == item.id);
+    final newList = List<Video>.from(onlinePlaylist.value);
+    newList.removeWhere((v) => v.id.value == item.id);
+    onlinePlaylist.value = newList;
   }
 
-  // --- MỚI THÊM: Đồng bộ đổi thứ tự từ Playlist lưu trữ vào Queue đang phát ---
   static Future<void> reorderInSavedAndActiveQueue(
     int oldIndex,
     int newIndex,
@@ -553,24 +527,18 @@ class OnlineMusicController {
   ) async {
     if (oldIndex < newIndex) newIndex -= 1;
 
-    final video = onlinePlaylist.removeAt(oldIndex);
-    onlinePlaylist.insert(newIndex, video);
+    final newList = List<Video>.from(onlinePlaylist.value);
+    final video = newList.removeAt(oldIndex);
+    newList.insert(newIndex, video);
+    onlinePlaylist.value = newList;
 
-    // Nếu đang phát từ playlist, đồng bộ luôn thứ tự vào trình phát
     if (currentQueueType.value == "playlist") {
-      final playlist = player.audioSource as ConcatenatingAudioSource?;
-      if (playlist != null) {
-        // Tìm vị trí thực tế trong hàng đợi đang phát
-        int qOld = onlineQueue.indexWhere((v) => v.id.value == video.id.value);
-        // Vì đây là reorder đồng bộ 1-1 từ playlist sang queue,
-        // ta có thể giả định thứ tự là giống nhau hoặc thực hiện move phức tạp hơn.
-        // Đơn giản nhất là move theo index mới trong playlist nếu onlineQueue cũng là bản sao 1-1.
-        if (qOld != -1) {
-          final qVideo = onlineQueue.removeAt(qOld);
-          onlineQueue.insert(newIndex, qVideo);
-          await playlist.move(qOld, newIndex);
-          currentIndex.value = player.currentIndex ?? -1;
-        }
+      int qOld = onlineQueue.indexWhere((v) => v.id.value == video.id.value);
+      if (qOld != -1) {
+        final qVideo = onlineQueue.removeAt(qOld);
+        onlineQueue.insert(newIndex, qVideo);
+        await player.moveAudioSource(qOld, newIndex);
+        currentIndex.value = player.currentIndex ?? -1;
       }
     }
   }
@@ -591,8 +559,7 @@ class OnlineMusicController {
   }
 
   static Future<void> addToQueue(Video video, AudioPlayer audioPlayer) async {
-    final playlist = audioPlayer.audioSource as ConcatenatingAudioSource?;
-    if (playlist == null) return;
+    if (audioPlayer.sequence.isEmpty) return;
 
     onlineQueue.add(video);
 
@@ -609,7 +576,7 @@ class OnlineMusicController {
       ),
     );
 
-    await playlist.add(source);
+    await audioPlayer.addAudioSource(source);
   }
 
   static Future<void> moveInQueue(
@@ -617,8 +584,7 @@ class OnlineMusicController {
     int newIndex,
     AudioPlayer audioPlayer,
   ) async {
-    final playlist = audioPlayer.audioSource as ConcatenatingAudioSource?;
-    if (playlist == null) return;
+    if (audioPlayer.sequence.isEmpty) return;
 
     if (oldIndex < newIndex) {
       newIndex -= 1;
@@ -627,17 +593,16 @@ class OnlineMusicController {
     final video = onlineQueue.removeAt(oldIndex);
     onlineQueue.insert(newIndex, video);
 
-    await playlist.move(oldIndex, newIndex);
+    await audioPlayer.moveAudioSource(oldIndex, newIndex);
   }
 
   static Future<void> removeFromQueue(
     int index,
     AudioPlayer audioPlayer,
   ) async {
-    final playlist = audioPlayer.audioSource as ConcatenatingAudioSource?;
-    if (playlist == null) return;
+    if (audioPlayer.sequence.length <= index) return;
 
     onlineQueue.removeAt(index);
-    await playlist.removeAt(index);
+    await audioPlayer.removeAudioSourceAt(index);
   }
 }

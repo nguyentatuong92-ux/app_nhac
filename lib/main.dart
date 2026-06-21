@@ -2,11 +2,16 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio_background/just_audio_background.dart'; // 1. Import thư viện chạy ngầm
 import 'list_view.dart';
+import 'music_controller.dart';
 
 // 2. Chuyển hàm main thành bất đồng bộ (async)
 Future<void> main() async {
   // 3. Đảm bảo các widget của Flutter được khởi tạo trước khi gọi Native code
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Khởi tạo MusicController
+  MusicController().init();
+
   // Mở khóa đoạn code này và sửa lại dòng androidNotificationIcon
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.example.app_nhac.channel.audio',

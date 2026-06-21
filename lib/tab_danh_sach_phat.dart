@@ -1,27 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import 'danh_sach_phat.dart'; // Để dùng PlaylistDetailsScreen và globalPlaylistCache
-
+import 'danh_sach_phat.dart';
 import 'danh_sach_online_view.dart';
 import 'online_music_controller.dart';
+import 'music_controller.dart';
 
 class TabDanhSachPhat extends StatefulWidget {
   final OnAudioQuery audioQuery;
-  final AudioPlayer audioPlayer;
 
-  const TabDanhSachPhat({
-    super.key,
-    required this.audioQuery,
-    required this.audioPlayer,
-  });
+  const TabDanhSachPhat({super.key, required this.audioQuery});
 
   @override
   State<TabDanhSachPhat> createState() => _TabDanhSachPhatState();
 }
 
 class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
-  // Chuyển hàm tạo danh sách phát sang đây
+  final MusicController _musicController = MusicController();
+
   void _showCreatePlaylistDialog() {
     TextEditingController controller = TextEditingController();
     showDialog(
@@ -61,7 +56,7 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
               onPressed: () async {
                 if (controller.text.isNotEmpty) {
                   await widget.audioQuery.createPlaylist(controller.text);
-                  setState(() {}); // Làm mới danh sách
+                  setState(() {});
                   if (context.mounted) Navigator.pop(context);
                 }
               },
@@ -76,7 +71,6 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
     );
   }
 
-  // Chuyển hàm tính tổng thời gian sang đây
   Future<String> _getPlaylistTotalDuration(int playlistId) async {
     try {
       List<SongModel> songs = await widget.audioQuery.queryAudiosFrom(
@@ -110,38 +104,41 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // MỤC DANH SÁCH ONLINE (MỚI THÊM)
-        ListTile(
-          leading: const Icon(
-            Icons.language,
-            color: Colors.tealAccent,
-            size: 40,
-          ),
-          title: const Text(
-            'Danh sách nhạc Online',
-            style: TextStyle(
-              color: Colors.tealAccent,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          subtitle: Text(
-            '${OnlineMusicController.onlinePlaylist.length} bài hát được thêm',
-            style: const TextStyle(color: Colors.tealAccent),
-          ),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => OnlinePlaylistDetailsScreen(
-                  audioPlayer: widget.audioPlayer,
+        ValueListenableBuilder<List>(
+          valueListenable: OnlineMusicController.onlinePlaylist,
+          builder: (context, playlist, _) {
+            return ListTile(
+              leading: const Icon(
+                Icons.language,
+                color: Colors.tealAccent,
+                size: 40,
+              ),
+              title: const Text(
+                'Danh sách nhạc Online',
+                style: TextStyle(
+                  color: Colors.tealAccent,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ).then((_) => setState(() {}));
+              subtitle: Text(
+                '${playlist.length} bài hát được thêm',
+                style: const TextStyle(color: Colors.tealAccent),
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OnlinePlaylistDetailsScreen(
+                      audioPlayer: _musicController.audioPlayer,
+                    ),
+                  ),
+                );
+              },
+            );
           },
         ),
         const Divider(color: Colors.tealAccent, height: 1),
-
         ListTile(
           leading: const Icon(
             Icons.add_circle,
@@ -156,7 +153,7 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          onTap: () => _showCreatePlaylistDialog(),
+          onTap: _showCreatePlaylistDialog,
         ),
         const Divider(color: Colors.tealAccent, height: 1),
         Expanded(
@@ -230,9 +227,7 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
                         MaterialPageRoute(
                           builder: (context) => PlaylistDetailsScreen(
                             playlist: playlists[index],
-                            audioPlayer: widget.audioPlayer,
                             audioQuery: widget.audioQuery,
-                            onPlaySong: (song) {},
                           ),
                         ),
                       ).then((value) => setState(() {}));

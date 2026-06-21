@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'online_music_controller.dart';
 import 'home_screen.dart';
 
@@ -43,110 +44,110 @@ class _OnlinePlaylistDetailsScreenState
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: OnlineMusicController.onlinePlaylist.isEmpty
-          ? const Center(
+      body: ValueListenableBuilder<List<Video>>(
+        valueListenable: OnlineMusicController.onlinePlaylist,
+        builder: (context, playlist, _) {
+          if (playlist.isEmpty) {
+            return const Center(
               child: Text(
                 'Danh sách trống.\nHãy thêm bài hát từ tab Online!',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 18),
               ),
-            )
-          : ReorderableListView.builder(
-              padding: const EdgeInsets.only(bottom: 100),
-              itemCount: OnlineMusicController.onlinePlaylist.length,
-              onReorder: (oldIndex, newIndex) {
-                setState(() {
-                  if (oldIndex < newIndex) newIndex -= 1;
-                  final video = OnlineMusicController.onlinePlaylist.removeAt(
-                    oldIndex,
-                  );
-                  OnlineMusicController.onlinePlaylist.insert(newIndex, video);
-                });
-              },
-              itemBuilder: (context, index) {
-                final video = OnlineMusicController.onlinePlaylist[index];
+            );
+          }
+          return ReorderableListView.builder(
+            padding: const EdgeInsets.only(bottom: 100),
+            itemCount: playlist.length,
+            onReorder: (oldIndex, newIndex) {
+              OnlineMusicController.reorderInSavedAndActiveQueue(
+                oldIndex,
+                newIndex,
+                widget.audioPlayer,
+              );
+            },
+            itemBuilder: (context, index) {
+              final video = playlist[index];
 
-                // Kiểm tra xem bài này có đang phát không
-                final currentItem =
-                    widget.audioPlayer.sequenceState?.currentSource?.tag
-                        as MediaItem?;
-                final isPlaying =
-                    currentItem?.id == video.id.value &&
-                    OnlineMusicController.currentQueueType.value == "playlist";
+              // Kiểm tra xem bài này có đang phát không
+              final currentItem =
+                  widget.audioPlayer.sequenceState?.currentSource?.tag
+                      as MediaItem?;
+              final isPlaying =
+                  currentItem?.id == video.id.value &&
+                  OnlineMusicController.currentQueueType.value == "playlist";
 
-                return ListTile(
-                  key: ValueKey(video.id.value + index.toString()),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      video.thumbnails.mediumResUrl,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                    ),
+              return ListTile(
+                key: ValueKey(video.id.value + index.toString()),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    video.thumbnails.mediumResUrl,
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
                   ),
-                  title: Text(
-                    video.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isPlaying ? Colors.tealAccent : Colors.white,
-                      fontWeight: isPlaying
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
+                ),
+                title: Text(
+                  video.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isPlaying ? Colors.tealAccent : Colors.white,
+                    fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
                   ),
-                  subtitle: Text(
-                    "${video.author} • ${_formatDuration(video.duration)}",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isPlaying ? Colors.tealAccent : Colors.grey[400],
-                    ),
+                ),
+                subtitle: Text(
+                  "${video.author} • ${_formatDuration(video.duration)}",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: isPlaying ? Colors.tealAccent : Colors.grey[400],
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isPlaying)
-                        const Icon(Icons.equalizer, color: Colors.tealAccent),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete,
-                          color: Colors.indigoAccent,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            OnlineMusicController.onlinePlaylist.removeAt(
-                              index,
-                            );
-                          });
-                        },
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isPlaying)
+                      const Icon(Icons.equalizer, color: Colors.tealAccent),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.indigoAccent,
                       ),
-                      const Icon(Icons.drag_handle, color: Colors.grey),
-                    ],
-                  ),
-                  onTap: () async {
-                    await OnlineMusicController.playSong(
-                      index,
-                      widget.audioPlayer,
-                      context,
-                      customQueue: OnlineMusicController.onlinePlaylist,
-                      queueType: "playlist",
-                    );
+                      onPressed: () {
+                        OnlineMusicController.removeFromSavedAndActiveQueue(
+                          index,
+                          widget.audioPlayer,
+                        );
+                      },
+                    ),
+                    const Icon(Icons.drag_handle, color: Colors.grey),
+                  ],
+                ),
+                onTap: () async {
+                  await OnlineMusicController.playSong(
+                    index,
+                    widget.audioPlayer,
+                    context,
+                    customQueue: OnlineMusicController.onlinePlaylist.value,
+                    queueType: "playlist",
+                  );
 
-                    if (context.mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              HomeScreen(audioPlayer: widget.audioPlayer),
-                        ),
-                      );
-                    }
-                  },
-                );
-              },
-            ),
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const HomeScreen(),
+                      ),
+                    );
+                  }
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

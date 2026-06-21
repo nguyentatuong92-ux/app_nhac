@@ -2,296 +2,88 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart'; // Đã thêm để nhận diện MediaItem
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
 import 'package:volume_controller/volume_controller.dart';
 import 'danh_sach_dang_phat.dart';
-import 'online_music_controller.dart';
+import 'music_controller.dart';
 
 class HomeScreen extends StatefulWidget {
-  final AudioPlayer audioPlayer;
-
-  const HomeScreen({super.key, required this.audioPlayer});
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isPlaying = false;
-  Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
-  bool _showVolumeSlider = false;
-
-  // SỬA LỖI: Đổi SongModel thành MediaItem
-  MediaItem? currentItem;
-  Timer? _sleepTimer;
-
-  double _currentVolume = 0.5;
+  final MusicController _musicController = MusicController();
   final OnAudioQuery _audioQuery = OnAudioQuery();
+
+  bool _showVolumeSlider = false;
+  double _currentVolume = 0.5;
   Uint8List? _artworkBytes;
-  int? _currentArtworkId;
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, "0");
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-
-    if (duration.inHours > 0) {
-      return "${duration.inHours}:$twoDigitMinutes:$twoDigitSeconds";
-    }
-    return "$twoDigitMinutes:$twoDigitSeconds";
-  }
+  String? _currentArtworkId;
+  Timer? _sleepTimer;
 
   @override
   void initState() {
     super.initState();
-
-    // SỬA LỖI: Lấy dữ liệu dưới dạng MediaItem thay vì SongModel
-    currentItem =
-        widget.audioPlayer.sequenceState.currentSource?.tag as MediaItem?;
-    if (currentItem != null) {
-      // Vì id của MediaItem là dạng String, ta cần kiểm tra xem nó có phải là số không
-      final songId = int.tryParse(currentItem!.id);
-      if (songId != null) {
-        _fetchArtwork(songId);
-      }
-    }
-
-    widget.audioPlayer.sequenceStateStream.listen((state) {
-      if (mounted) {
-        final newItem = state?.currentSource?.tag as MediaItem?;
-        setState(() => currentItem = newItem);
-        if (newItem != null) {
-          final songId = int.tryParse(newItem.id);
-          if (songId != null) {
-            _fetchArtwork(songId);
-          } else {
-            // Nếu là nhạc Online (ID không phải số), xóa ảnh cũ để UI cập nhật
-            setState(() {
-              _artworkBytes = null;
-              _currentArtworkId = null;
-            });
-          }
-        }
-      }
-    });
-
-    // ĐÃ SỬA: Lắng nghe toàn bộ trạng thái của trình phát
-    widget.audioPlayer.playerStateStream.listen((state) {
-      if (mounted) {
-        setState(() {
-          // Chỉ hiện nút Pause khi đang play VÀ chưa chạy hết bài cuối
-          isPlaying =
-              state.playing &&
-              state.processingState != ProcessingState.completed;
-        });
-      }
-    });
-    widget.audioPlayer.durationStream.listen(
-      (d) => setState(() => _duration = d ?? Duration.zero),
-    );
-    widget.audioPlayer.positionStream.listen(
-      (p) => setState(() => _position = p),
-    );
-
-    VolumeController.instance.showSystemUI = false;
-    VolumeController.instance.getVolume().then((volume) {
-      if (mounted) setState(() => _currentVolume = volume);
-    });
-    VolumeController.instance.addListener((volume) {
-      if (mounted) setState(() => _currentVolume = volume);
-    });
+    _initVolume();
+    _musicController.currentItem.addListener(_onItemChanged);
+    _onItemChanged(); // Initial fetch
   }
 
-  Future<void> _fetchArtwork(int songId) async {
-    if (_currentArtworkId == songId) return;
+  @override
+  void dispose() {
+    _musicController.currentItem.removeListener(_onItemChanged);
+    _sleepTimer?.cancel();
+    super.dispose();
+  }
+
+  void _initVolume() {
+    VolumeController.instance.showSystemUI = false;
+    VolumeController.instance.getVolume().then(
+      (v) => setState(() => _currentVolume = v),
+    );
+    VolumeController.instance.addListener(
+      (v) => setState(() => _currentVolume = v),
+    );
+  }
+
+  void _onItemChanged() {
+    final item = _musicController.currentItem.value;
+    if (item != null && item.id != _currentArtworkId) {
+      _currentArtworkId = item.id;
+      if (item.extras?['is_online'] != true) {
+        final id = int.tryParse(item.id);
+        if (id != null) _fetchArtwork(id);
+      } else {
+        setState(() => _artworkBytes = null);
+      }
+    }
+  }
+
+  Future<void> _fetchArtwork(int id) async {
     try {
-      final Uint8List? bytes = await _audioQuery.queryArtwork(
-        songId,
+      final bytes = await _audioQuery.queryArtwork(
+        id,
         ArtworkType.AUDIO,
         size: 500,
       );
-
-      if (mounted) {
-        setState(() {
-          _artworkBytes = bytes;
-          _currentArtworkId = songId;
-        });
-      }
+      if (mounted) setState(() => _artworkBytes = bytes);
     } catch (e) {
       debugPrint("Lỗi lấy ảnh bìa: $e");
     }
   }
 
-  @override
-  void dispose() {
-    _sleepTimer?.cancel();
-    super.dispose();
-  }
-
-  void _setSleepTimer(int minutes) {
-    _sleepTimer?.cancel();
-    if (minutes == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Đã tắt hẹn giờ!',
-            style: TextStyle(color: Colors.tealAccent, fontSize: 20),
-          ),
-        ),
-      );
-      return;
-    }
-    _sleepTimer = Timer(
-      Duration(minutes: minutes),
-      () => widget.audioPlayer.pause(),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Nhạc sẽ tự tắt sau $minutes phút nữa!',
-          style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-        ),
-      ),
-    );
-  }
-
-  void _showCustomTimerDialog() {
-    TextEditingController controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A3A),
-        title: const Text(
-          'Nhập thời gian (Phút)',
-          style: TextStyle(color: Colors.tealAccent),
-        ),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Hủy',
-              style: TextStyle(color: Colors.lime, fontSize: 20),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              int? m = int.tryParse(controller.text);
-              if (m != null && m > 0) {
-                Navigator.pop(context);
-                _setSleepTimer(m);
-              }
-            },
-            child: const Text(
-              'Đồng ý',
-              style: TextStyle(color: Colors.tealAccent, fontSize: 20),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSleepTimerBottomSheet() {
-    showModalBottomSheet(
-      backgroundColor: const Color(0xFF2A2A3A),
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (c) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.timer_outlined,
-                  color: Colors.tealAccent,
-                  size: 26,
-                ),
-                title: const Text(
-                  "15 Phút",
-                  style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-                ),
-                onTap: () {
-                  Navigator.pop(c);
-                  _setSleepTimer(15);
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.timer_outlined,
-                  color: Colors.tealAccent,
-                  size: 26,
-                ),
-                title: const Text(
-                  "30 Phút",
-                  style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-                ),
-                onTap: () {
-                  Navigator.pop(c);
-                  _setSleepTimer(30);
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.timer_outlined,
-                  color: Colors.tealAccent,
-                  size: 26,
-                ),
-                title: const Text(
-                  "50 Phút",
-                  style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-                ),
-                onTap: () {
-                  Navigator.pop(c);
-                  _setSleepTimer(50);
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.edit_outlined,
-                  color: Colors.tealAccent,
-                  size: 26,
-                ),
-                title: const Text(
-                  "Tùy chỉnh...",
-                  style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-                ),
-                onTap: () {
-                  Navigator.pop(c);
-                  _showCustomTimerDialog();
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.timer_off_outlined,
-                  color: Colors.tealAccent,
-                  size: 26,
-                ),
-                title: const Text(
-                  "Tắt hẹn giờ",
-                  style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-                ),
-                onTap: () {
-                  Navigator.pop(c);
-                  _setSleepTimer(0);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  String _formatDuration(Duration d) {
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String minutes = twoDigits(d.inMinutes.remainder(60));
+    String seconds = twoDigits(d.inSeconds.remainder(60));
+    return d.inHours > 0
+        ? "${d.inHours}:$minutes:$seconds"
+        : "$minutes:$seconds";
   }
 
   @override
@@ -307,7 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
           'Tá Tưởng',
           style: TextStyle(
             color: Colors.tealAccent,
-            fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -351,40 +142,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               const Spacer(),
+              _buildArtworkSection(artworkSize),
+              const SizedBox(height: 20),
+              ValueListenableBuilder<MediaItem?>(
+                valueListenable: _musicController.currentItem,
+                builder: (context, item, _) => TextScroll(
+                  item?.title ?? "Đang phát",
+                  style: const TextStyle(
+                    color: Colors.tealAccent,
+                    fontSize: 24,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              _buildControlsRow(),
+              const SizedBox(height: 15),
+              _buildProgressSlider(),
+              _buildPlaybackButtons(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: artworkSize,
-                    height: artworkSize,
-                    decoration: BoxDecoration(
-                      color: Color(0xFF4B5563),
-                      borderRadius: BorderRadius.circular(artworkSize / 2),
-                      border: Border.all(color: Colors.tealAccent, width: 3),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(artworkSize / 2),
-                      child:
-                          (currentItem?.artUri != null &&
-                              currentItem!.artUri.toString().startsWith('http'))
-                          ? Image.network(
-                              currentItem!.artUri.toString(),
-                              width: artworkSize,
-                              height: artworkSize,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(
-                                    Icons.music_note,
-                                    size: 100,
-                                    color: Colors.tealAccent,
-                                  ),
-                            )
-                          : (_artworkBytes != null && _artworkBytes!.isNotEmpty)
+  Widget _buildArtworkSection(double size) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ValueListenableBuilder<MediaItem?>(
+          valueListenable: _musicController.currentItem,
+          builder: (context, item, _) {
+            return Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: const Color(0xFF4B5563),
+                borderRadius: BorderRadius.circular(size / 2),
+                border: Border.all(color: Colors.tealAccent, width: 3),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(size / 2),
+                child: item?.extras?['is_online'] == true
+                    ? Image.network(
+                        item!.artUri.toString(),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.music_note,
+                          size: 100,
+                          color: Colors.tealAccent,
+                        ),
+                      )
+                    : (_artworkBytes != null
                           ? Image.memory(
                               _artworkBytes!,
-                              width: artworkSize,
-                              height: artworkSize,
                               fit: BoxFit.cover,
                               gaplessPlayback: true,
                             )
@@ -392,255 +203,347 @@ class _HomeScreenState extends State<HomeScreen> {
                               Icons.music_note,
                               size: 100,
                               color: Colors.tealAccent,
-                            ),
-                    ),
-                  ),
-                  // MỚI THÊM: Loading indicator khi đang lấy link nhạc Online
-                  StreamBuilder<ProcessingState>(
-                    stream: widget.audioPlayer.processingStateStream,
-                    builder: (context, snapshot) {
-                      final state = snapshot.data;
-                      // Hiển thị vòng xoáy khi đang loading, buffering hoặc idle (đang nạp nguồn mới)
-                      if (state == ProcessingState.loading ||
-                          state == ProcessingState.buffering ||
-                          state == ProcessingState.idle) {
-                        return Container(
-                          width: artworkSize,
-                          height: artworkSize,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(
-                              artworkSize / 2,
-                            ),
-                          ),
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.tealAccent,
-                            ),
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ],
+                            )),
               ),
+            );
+          },
+        ),
+        StreamBuilder<ProcessingState>(
+          stream: _musicController.audioPlayer.processingStateStream,
+          builder: (context, snapshot) {
+            final state = snapshot.data;
+            if (state == ProcessingState.loading ||
+                state == ProcessingState.buffering) {
+              return CircularProgressIndicator(color: Colors.tealAccent);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+  }
 
-              const SizedBox(height: 20),
-              // Cập nhật lấy tên bài hát từ biến currentItem
-              TextScroll(
-                currentItem?.title ?? "Đang phát",
-                style: const TextStyle(color: Colors.tealAccent, fontSize: 24),
+  Widget _buildControlsRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        IconButton(
+          icon: const Icon(
+            Icons.queue_music,
+            color: Colors.tealAccent,
+            size: 30,
+          ),
+          onPressed: () =>
+              DanhSachDangPhat.show(context, _musicController.audioPlayer),
+        ),
+        StreamBuilder<LoopMode>(
+          stream: _musicController.audioPlayer.loopModeStream,
+          builder: (context, snapshot) {
+            final loopMode = snapshot.data ?? LoopMode.off;
+            return IconButton(
+              icon: Icon(
+                loopMode == LoopMode.off
+                    ? Icons.repeat
+                    : (loopMode == LoopMode.all
+                          ? Icons.repeat
+                          : Icons.repeat_one),
+                color: loopMode == LoopMode.off
+                    ? Colors.grey
+                    : Colors.tealAccent,
+                size: 30,
               ),
-              const Spacer(),
-              // NÚT CHẾ ĐỘ PHÁT (ĐẶT Ở GIỮA)
-              Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.spaceAround, // Căn giữa nút
-                children: [
-                  // NÚT DANH SÁCH ĐANG PHÁT MỚI THÊM
-                  IconButton(
-                    icon: const Icon(
-                      Icons.queue_music,
-                      color: Colors.tealAccent,
-                      size: 30,
+              onPressed: () {
+                final nextMode = loopMode == LoopMode.off
+                    ? LoopMode.all
+                    : (loopMode == LoopMode.all ? LoopMode.one : LoopMode.off);
+                _musicController.audioPlayer.setLoopMode(nextMode);
+
+                // Thêm thông báo nhanh
+                String message = "";
+                IconData icon = Icons.repeat;
+                switch (nextMode) {
+                  case LoopMode.off:
+                    message = "Tắt lặp lại";
+                    icon = Icons.repeat;
+                    break;
+                  case LoopMode.all:
+                    message = "Lặp lại tất cả";
+                    icon = Icons.repeat;
+                    break;
+                  case LoopMode.one:
+                    message = "Lặp lại 1 bài";
+                    icon = Icons.repeat_one;
+                    break;
+                }
+
+                ScaffoldMessenger.of(context).clearSnackBars();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: const Color(0xFF64B5F6),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15.0),
                     ),
-                    onPressed: () {
-                      // Gọi hàm tĩnh từ tệp mới để hiển thị bảng
-                      DanhSachDangPhat.show(context, widget.audioPlayer);
-                    },
-                  ),
-
-                  StreamBuilder<LoopMode>(
-                    stream: widget.audioPlayer.loopModeStream,
-                    builder: (context, snapshot) {
-                      final loopMode = snapshot.data ?? LoopMode.off;
-
-                      Icon icon;
-                      if (loopMode == LoopMode.off) {
-                        icon = const Icon(
-                          Icons.repeat,
-                          color: Colors.grey,
-                          size: 30,
-                        );
-                      } else if (loopMode == LoopMode.all) {
-                        icon = const Icon(
-                          Icons.repeat,
-                          color: Colors.tealAccent,
-                          size: 30,
-                        );
-                      } else {
-                        icon = const Icon(
-                          Icons.repeat_one,
-                          color: Colors.tealAccent,
-                          size: 30,
-                        );
-                      }
-
-                      return IconButton(
-                        icon: icon,
-                        onPressed: () {
-                          String thongBao = "";
-
-                          if (loopMode == LoopMode.off) {
-                            widget.audioPlayer.setLoopMode(LoopMode.all);
-                            thongBao = "Đã bật: Lặp toàn bộ danh sách";
-                          } else if (loopMode == LoopMode.all) {
-                            widget.audioPlayer.setLoopMode(LoopMode.one);
-                            thongBao = "Đã bật: Lặp 1 bài hiện tại";
-                          } else {
-                            widget.audioPlayer.setLoopMode(LoopMode.off);
-                            thongBao = "Đã tắt: Phát theo danh sách";
-                          }
-
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              // Làm nền trong suốt và xóa đổ bóng
-                              backgroundColor: Colors.transparent,
-                              elevation: 0,
-                              behavior: SnackBarBehavior.floating,
-                              margin: const EdgeInsets.only(bottom: 230),
-                              content: Text(
-                                thongBao,
-                                style: const TextStyle(
-                                  color: Colors
-                                      .tealAccent, // Đổi màu chữ cho hợp theme
-                                  fontSize: 16,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              duration: const Duration(milliseconds: 1500),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15),
-
-              // Kết thúc phần nút lặp lại
-              Column(
-                children: [
-                  Slider(
-                    activeColor: Colors.tealAccent,
-                    inactiveColor: Colors.grey[800],
-                    value: _position.inSeconds.toDouble().clamp(
-                      0.0,
-                      _duration.inSeconds.toDouble(),
-                    ),
-                    max: _duration.inSeconds.toDouble(),
-                    onChanged: (v) =>
-                        widget.audioPlayer.seek(Duration(seconds: v.toInt())),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    content: Row(
                       children: [
+                        Icon(icon, color: Colors.white),
+                        const SizedBox(width: 10),
                         Text(
-                          _formatDuration(_position),
-                          style: const TextStyle(
-                            color: Colors.tealAccent,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Text(
-                          _formatDuration(_duration),
-                          style: const TextStyle(
-                            color: Colors.tealAccent,
-                            fontSize: 18,
-                          ),
+                          message,
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ],
                     ),
                   ),
-                ],
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressSlider() {
+    return StreamBuilder<Duration>(
+      stream: _musicController.audioPlayer.positionStream,
+      builder: (context, snapshot) {
+        final pos = snapshot.data ?? Duration.zero;
+        final dur = _musicController.audioPlayer.duration ?? Duration.zero;
+        return Column(
+          children: [
+            Slider(
+              activeColor: Colors.tealAccent,
+              inactiveColor: Colors.grey[800],
+              value: pos.inSeconds.toDouble().clamp(
+                0,
+                dur.inSeconds.toDouble(),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              max: dur.inSeconds.toDouble() > 0
+                  ? dur.inSeconds.toDouble()
+                  : 1.0,
+              onChanged: (v) => _musicController.audioPlayer.seek(
+                Duration(seconds: v.toInt()),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.skip_previous,
-                      size: 50,
+                  Text(
+                    _formatDuration(pos),
+                    style: const TextStyle(
                       color: Colors.tealAccent,
+                      fontSize: 18,
                     ),
-                    onPressed: () async {
-                      // Kiểm tra xem có đang hát nhạc Online không dựa vào cờ is_online
-                      if (currentItem?.extras?['is_online'] == true) {
-                        // SỬA TẠI ĐÂY: Sử dụng playSong để kích hoạt tải link nhạc thực tế
-                        int prevIndex =
-                            OnlineMusicController.currentIndex.value - 1;
-                        if (prevIndex >= 0) {
-                          OnlineMusicController.playSong(
-                            prevIndex,
-                            widget.audioPlayer,
-                            context,
-                            showLoading:
-                                false, // Không hiện vòng xoay để trải nghiệm mượt hơn
-                            queueType:
-                                OnlineMusicController.currentQueueType.value,
-                          );
-                        }
-                      } else {
-                        widget.audioPlayer.seekToPrevious();
-                      }
-                    },
                   ),
-                  IconButton(
-                    icon: Icon(
-                      isPlaying ? Icons.pause_circle : Icons.play_circle,
+                  Text(
+                    _formatDuration(dur),
+                    style: const TextStyle(
                       color: Colors.tealAccent,
-                      size: 70,
+                      fontSize: 18,
                     ),
-                    onPressed: () {
-                      if (isPlaying) {
-                        widget.audioPlayer.pause();
-                      } else {
-                        // Nếu đã hát hết danh sách (completed), tua lại bài đầu tiên rồi mới phát
-                        if (widget.audioPlayer.processingState ==
-                            ProcessingState.completed) {
-                          widget.audioPlayer.seek(Duration.zero, index: 0);
-                        }
-                        widget.audioPlayer.play();
-                      }
-                    },
-                  ),
-                  // NÚT QUA BÀI
-                  IconButton(
-                    icon: const Icon(
-                      Icons.skip_next,
-                      size: 50,
-                      color: Colors.tealAccent,
-                    ),
-                    onPressed: () async {
-                      if (currentItem?.extras?['is_online'] == true) {
-                        // SỬA TẠI ĐÂY: Sử dụng playSong để kích hoạt tải link nhạc thực tế
-                        int nextIndex =
-                            OnlineMusicController.currentIndex.value + 1;
-                        if (nextIndex <
-                            OnlineMusicController.onlineQueue.length) {
-                          OnlineMusicController.playSong(
-                            nextIndex,
-                            widget.audioPlayer,
-                            context,
-                            showLoading: false,
-                            queueType:
-                                OnlineMusicController.currentQueueType.value,
-                          );
-                        }
-                      } else {
-                        widget.audioPlayer.seekToNext();
-                      }
-                    },
                   ),
                 ],
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPlaybackButtons() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        IconButton(
+          icon: const Icon(
+            Icons.skip_previous,
+            size: 50,
+            color: Colors.tealAccent,
+          ),
+          onPressed: () => _musicController.audioPlayer.seekToPrevious(),
+        ),
+        ValueListenableBuilder<bool>(
+          valueListenable: _musicController.isPlaying,
+          builder: (context, playing, _) => IconButton(
+            icon: Icon(
+              playing ? Icons.pause_circle : Icons.play_circle,
+              color: Colors.tealAccent,
+              size: 70,
+            ),
+            onPressed: () => playing
+                ? _musicController.audioPlayer.pause()
+                : _musicController.audioPlayer.play(),
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.skip_next, size: 50, color: Colors.tealAccent),
+          onPressed: () => _musicController.audioPlayer.seekToNext(),
+        ),
+      ],
+    );
+  }
+
+  void _showSleepTimerBottomSheet() {
+    showModalBottomSheet(
+      backgroundColor: const Color(0xFF2A2A3A),
+      context: context,
+      isScrollControlled:
+          true, // Cho phép bottom sheet co giãn khi hiện bàn phím
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (c) => Padding(
+        padding: EdgeInsets.only(
+          bottom:
+              MediaQuery.of(c).viewInsets.bottom +
+              20, // Đẩy lên khi hiện bàn phím và tránh thanh tác vụ
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Text(
+                  "Hẹn giờ tắt nhạc",
+                  style: TextStyle(
+                    color: Colors.tealAccent,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const Divider(color: Colors.tealAccent, height: 1),
+              ...[15, 30, 50].map(
+                (m) => ListTile(
+                  title: Text(
+                    "$m Phút",
+                    style: const TextStyle(
+                      color: Colors.tealAccent,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(c);
+                    _setSleepTimer(m);
+                  },
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit, color: Colors.tealAccent),
+                title: const Text(
+                  "Tùy chọn thời gian",
+                  style: TextStyle(
+                    color: Colors.tealAccent,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(c);
+                  _showCustomTimerDialog();
+                },
+              ),
+              const SizedBox(height: 10),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showCustomTimerDialog() {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A3A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: const Text(
+          "Nhập số phút",
+          style: TextStyle(color: Colors.tealAccent),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          style: const TextStyle(color: Colors.tealAccent),
+          decoration: const InputDecoration(
+            hintText: "Nhập thời gian (phút)",
+            hintStyle: TextStyle(color: Colors.grey),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.grey),
+            ),
+            focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.tealAccent),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              final int? m = int.tryParse(controller.text);
+              if (m != null && m > 0) {
+                Navigator.pop(context);
+                _setSleepTimer(m);
+              }
+            },
+            child: const Text(
+              "Hẹn giờ",
+              style: TextStyle(color: Colors.tealAccent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _setSleepTimer(int minutes) {
+    _sleepTimer?.cancel();
+    _sleepTimer = Timer(Duration(minutes: minutes), () {
+      _musicController.audioPlayer.pause();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF64B5F6),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                15.0,
+              ), // Điều chỉnh độ bo góc tại đây
+            ),
+            content: Text(
+              "Đã tự động tắt nhạc theo hẹn giờ ($minutes phút)",
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF64B5F6),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            15.0,
+          ), // Điều chỉnh độ bo góc tại đây
+        ),
+        duration: const Duration(seconds: 2),
+        content: Text(
+          "Nhạc sẽ tắt sau $minutes phút",
+          style: const TextStyle(color: Colors.white),
         ),
       ),
     );

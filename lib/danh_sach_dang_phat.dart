@@ -37,7 +37,6 @@ class DanhSachDangPhat extends StatelessWidget {
         final sequence = state?.sequence ?? [];
         final currentIndex = state?.currentIndex ?? -1;
 
-        // Xác định loại nhạc đang phát dựa trên bài hát hiện tại
         final currentSource = state?.currentSource;
         final currentMediaItem = currentSource?.tag as MediaItem?;
         final isOnline = currentMediaItem?.extras?['is_online'] == true;
@@ -46,7 +45,6 @@ class DanhSachDangPhat extends StatelessWidget {
           heightFactor: 0.7,
           child: Column(
             children: [
-              // 1. Thanh Tiêu đề
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -75,8 +73,6 @@ class DanhSachDangPhat extends StatelessWidget {
                 ),
               ),
               const Divider(color: Colors.tealAccent, height: 1),
-
-              // 2. Danh sách bài hát
               Expanded(
                 child: sequence.isEmpty
                     ? const Center(
@@ -91,23 +87,20 @@ class DanhSachDangPhat extends StatelessWidget {
                         onReorder: (oldIndex, newIndex) async {
                           if (oldIndex < newIndex) newIndex -= 1;
                           try {
-                            final audioSource =
-                                audioPlayer.audioSource
-                                    as ConcatenatingAudioSource?;
-                            if (audioSource != null) {
-                              await audioSource.move(oldIndex, newIndex);
+                            await audioPlayer.moveAudioSource(
+                              oldIndex,
+                              newIndex,
+                            );
 
-                              // Nếu là nhạc Online, cần cập nhật onlineQueue trong controller
-                              if (isOnline) {
-                                final video = OnlineMusicController.onlineQueue
-                                    .removeAt(oldIndex);
-                                OnlineMusicController.onlineQueue.insert(
-                                  newIndex,
-                                  video,
-                                );
-                                OnlineMusicController.currentIndex.value =
-                                    audioPlayer.currentIndex ?? -1;
-                              }
+                            if (isOnline) {
+                              final video = OnlineMusicController.onlineQueue
+                                  .removeAt(oldIndex);
+                              OnlineMusicController.onlineQueue.insert(
+                                newIndex,
+                                video,
+                              );
+                              OnlineMusicController.currentIndex.value =
+                                  audioPlayer.currentIndex ?? -1;
                             }
                           } catch (e) {
                             debugPrint("Lỗi di chuyển: $e");
@@ -187,12 +180,7 @@ class DanhSachDangPhat extends StatelessWidget {
                                     size: 20,
                                   ),
                                   onPressed: () async {
-                                    final audioSource =
-                                        audioPlayer.audioSource
-                                            as ConcatenatingAudioSource?;
-                                    if (audioSource != null &&
-                                        audioSource.length > index) {
-                                      // 1. Đồng bộ xóa trong danh sách lưu trữ nếu đang phát từ Playlist
+                                    if (audioPlayer.sequence.length > index) {
                                       if (isOnline &&
                                           OnlineMusicController
                                                   .currentQueueType
@@ -203,10 +191,10 @@ class DanhSachDangPhat extends StatelessWidget {
                                         );
                                       }
 
-                                      // 2. Xóa khỏi hàng đợi vật lý của trình phát
-                                      await audioSource.removeAt(index);
+                                      await audioPlayer.removeAudioSourceAt(
+                                        index,
+                                      );
 
-                                      // 3. Cập nhật hàng đợi online để đồng bộ UI
                                       if (isOnline) {
                                         OnlineMusicController.onlineQueue
                                             .removeAt(index);
@@ -226,7 +214,6 @@ class DanhSachDangPhat extends StatelessWidget {
                             ),
                             onTap: () {
                               if (isItemOnline) {
-                                // Nếu là nhạc online, phải gọi playSong để lấy link thực
                                 OnlineMusicController.playSong(
                                   index,
                                   audioPlayer,

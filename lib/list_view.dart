@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'cap_nhat_service.dart';
 import 'mini_player.dart';
-import 'online_music_controller.dart'; // THÊM IMPORT NÀY
+import 'music_controller.dart';
 import 'tab_bai_hat.dart';
 import 'tab_danh_sach_phat.dart';
 import 'tab_online.dart';
@@ -20,26 +21,14 @@ class _ListViewScreenState extends State<ListViewScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final OnAudioQuery _audioQuery = OnAudioQuery();
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final MusicController _musicController = MusicController();
 
   bool _hasPermission = false;
-
-  // BIẾN CHO NHẠC OFFLINE
-  SongModel? currentlyPlaying;
-
-  // --- MỚI THÊM: BIẾN CHO NHẠC ONLINE ---
-  bool _isOnlinePlaying = false;
-  String? _onlineTitle;
-  String? _onlineArtist;
-  String? _onlineThumbUrl;
-  // --------------------------------------
-
-  final Set<int> _deletedSongIds = {};
   bool _coBanCapNhatMoi = false;
 
-  List<SongModel> _danhSachDangPhat = [];
   List<SongModel> _allSongs = [];
   bool _isLoadingSongs = true;
+  final Set<int> _deletedSongIds = {};
 
   Future<void> _kiemTraBanCapNhatNgam() async {
     bool coCapNhat = await CapNhatService.kiemTraCoBanCapNhatNgam();
@@ -88,28 +77,6 @@ class _ListViewScreenState extends State<ListViewScreen>
     }
   }
 
-  // --- MỚI THÊM: HÀM NHẬN DỮ LIỆU TỪ TAB ONLINE ---
-  void _handlePlayOnline(String title, String artist, String thumbUrl) {
-    setState(() {
-      _isOnlinePlaying = true;
-      _onlineTitle = title;
-      _onlineArtist = artist;
-      _onlineThumbUrl = thumbUrl;
-      currentlyPlaying = null; // Xóa trạng thái bài Offline
-    });
-  }
-
-  // HÀM XỬ LÝ KHI CHỌN NHẠC OFFLINE ĐỂ RESET TRẠNG THÁI ONLINE
-  void _handlePlayOffline(List<SongModel> songs) {
-    setState(() {
-      _danhSachDangPhat = songs;
-      _isOnlinePlaying = false;
-      // QUAN TRỌNG: Reset currentIndex của Online về -1 để đồng bộ UI
-      OnlineMusicController.currentIndex.value = -1;
-    });
-  }
-  // ------------------------------------------------
-
   @override
   void initState() {
     super.initState();
@@ -121,24 +88,11 @@ class _ListViewScreenState extends State<ListViewScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _kiemTraBanCapNhatNgam();
     });
-
-    _audioPlayer.currentIndexStream.listen((index) {
-      // MỚI THÊM: Bỏ qua update index nếu đang phát Online
-      if (_isOnlinePlaying) return;
-
-      if (index == null || _danhSachDangPhat.isEmpty) return;
-      if (mounted) {
-        setState(() {
-          currentlyPlaying = _danhSachDangPhat[index];
-        });
-      }
-    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -205,7 +159,7 @@ class _ListViewScreenState extends State<ListViewScreen>
             icon: const Icon(Icons.refresh, color: Colors.tealAccent),
             tooltip: 'Làm mới danh sách',
             onPressed: () {
-              setState(() {});
+              _loadSongs();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   backgroundColor: Color(0xFF64B5F6),
@@ -227,18 +181,11 @@ class _ListViewScreenState extends State<ListViewScreen>
           labelColor: Colors.tealAccent,
           unselectedLabelColor: Colors.tealAccent,
           indicatorColor: Colors.tealAccent,
-
-          // 1. Ép khoảng trống hai bên của mỗi tab nhỏ lại để nhường chỗ cho chữ
-          labelPadding: EdgeInsets.symmetric(horizontal: 4.0),
-
-          tabs: [
+          labelPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+          tabs: const [
             Tab(
               icon: Icon(Icons.music_note),
-              // 2. Thay vì dùng thuộc tính 'text', ta dùng 'child' kết hợp FittedBox
-              child: FittedBox(
-                fit: BoxFit.scaleDown, // Tự động thu nhỏ chữ nếu bị thiếu chỗ
-                child: Text('Bài hát'),
-              ),
+              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Bài hát')),
             ),
             Tab(
               icon: Icon(Icons.queue_music),
@@ -252,99 +199,66 @@ class _ListViewScreenState extends State<ListViewScreen>
         ),
       ),
       body: !_hasPermission
-          ? Center(
-              // ... (Phần hiển thị xin quyền giữ nguyên) ...
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.folder_special,
-                    size: 80,
-                    color: Colors.tealAccent,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Ứng dụng cần quyền đọc file\nđể tải danh sách bài hát.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.tealAccent, fontSize: 18),
-                  ),
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.tealAccent,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 30,
-                        vertical: 15,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onPressed: () => _checkAndRequestPermissions(),
-                    child: const Text(
-                      'BẤM VÀO ĐÂY ĐỂ CẤP QUYỀN',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
+          ? _buildPermissionUI()
           : TabBarView(
               controller: _tabController,
               children: [
                 TabBaiHat(
                   allSongs: _allSongs,
                   isLoadingSongs: _isLoadingSongs,
-                  audioPlayer: _audioPlayer,
                   audioQuery: _audioQuery,
-                  currentlyPlaying: currentlyPlaying,
                   deletedSongIds: _deletedSongIds,
                   onSongDeleted: (songId) {
                     setState(() {
                       _deletedSongIds.add(songId);
                     });
                   },
-                  onPlaySongs: _handlePlayOffline,
                 ),
-                TabDanhSachPhat(
-                  audioQuery: _audioQuery,
-                  audioPlayer: _audioPlayer,
-                ),
-
-                // MỚI THÊM: Truyền hàm callback vào TabOnline
-                TabOnline(audioPlayer: _audioPlayer, onPlay: _handlePlayOnline),
+                TabDanhSachPhat(audioQuery: _audioQuery),
+                TabOnline(audioPlayer: _musicController.audioPlayer),
               ],
             ),
-
-      // --- SỬA LỖI 1 TẠI ĐÂY ---
-      bottomNavigationBar: StreamBuilder<SequenceState?>(
-        stream: _audioPlayer.sequenceStateStream,
-        builder: (context, snapshot) {
-          // Tự động kiểm tra xem có bài hát nào đang được tải vào audioPlayer không
-          final hasAudio =
-              snapshot.hasData && snapshot.data?.currentSource != null;
-
-          if (hasAudio) {
-            return SafeArea(
-              child: MiniPlayer(
-                // Dữ liệu cho MiniPlayer
-                isOnline: _isOnlinePlaying,
-                currentSong: currentlyPlaying,
-                onlineTitle: _onlineTitle,
-                onlineArtist: _onlineArtist,
-                onlineThumbUrl: _onlineThumbUrl,
-                audioPlayer: _audioPlayer,
-                onRefresh: () => setState(() {}),
-              ),
-            );
+      bottomNavigationBar: ValueListenableBuilder<MediaItem?>(
+        valueListenable: _musicController.currentItem,
+        builder: (context, item, _) {
+          if (item != null) {
+            return const SafeArea(child: MiniPlayer());
           }
-          // Nếu không có nhạc, tự động ẩn đi
           return const SizedBox.shrink();
         },
+      ),
+    );
+  }
+
+  Widget _buildPermissionUI() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.folder_special, size: 80, color: Colors.tealAccent),
+          const SizedBox(height: 20),
+          const Text(
+            'Ứng dụng cần quyền đọc file\nđể tải danh sách bài hát.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+          ),
+          const SizedBox(height: 30),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.tealAccent,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: _checkAndRequestPermissions,
+            child: const Text(
+              'BẤM VÀO ĐÂY ĐỂ CẤP QUYỀN',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
