@@ -6,6 +6,10 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
 import 'package:volume_controller/volume_controller.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'danh_sach_dang_phat.dart';
 import 'music_controller.dart';
 
@@ -25,19 +29,108 @@ class _HomeScreenState extends State<HomeScreen> {
   Uint8List? _artworkBytes;
   String? _currentArtworkId;
   Timer? _sleepTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  bool _isOffline = false;
+  int _cacheClearDays = 7; // Mặc định 7 ngày
 
   @override
   void initState() {
     super.initState();
     _initVolume();
+    _initConnectivity();
+    _initCacheSettings();
     _musicController.currentItem.addListener(_onItemChanged);
     _onItemChanged(); // Initial fetch
+  }
+
+  Future<void> _initCacheSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _cacheClearDays = prefs.getInt('cache_clear_days') ?? 7;
+    });
+    _checkAndClearCache();
+  }
+
+  Future<void> _checkAndClearCache() async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastClear = prefs.getInt('last_cache_clear_timestamp') ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    // Kiểm tra nếu đã đến hạn xóa
+    if (now - lastClear > _cacheClearDays * 24 * 60 * 60 * 1000) {
+      await _clearAppCache();
+      await prefs.setInt('last_cache_clear_timestamp', now);
+    }
+  }
+
+  Future<void> _clearAppCache() async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      if (tempDir.existsSync()) {
+        tempDir.listSync().forEach((entity) {
+          try {
+            if (entity is File) {
+              entity.deleteSync();
+            } else if (entity is Directory) {
+              entity.deleteSync(recursive: true);
+            }
+          } catch (e) {
+            debugPrint("Không thể xóa file: $e");
+          }
+        });
+        debugPrint("Đã xóa bộ nhớ đệm thành công.");
+      }
+    } catch (e) {
+      debugPrint("Lỗi khi xóa bộ nhớ đệm: $e");
+    }
+  }
+
+  Future<void> _updateCacheSettings(int days) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('cache_clear_days', days);
+    setState(() {
+      _cacheClearDays = days;
+    });
+  }
+
+  Future<void> _initConnectivity() async {
+    final connectivity = Connectivity();
+    final result = await connectivity.checkConnectivity();
+    _updateConnectionStatus(result);
+
+    _connectivitySubscription = connectivity.onConnectivityChanged.listen(
+      _updateConnectionStatus,
+    );
+  }
+
+  void _updateConnectionStatus(List<ConnectivityResult> result) {
+    setState(() {
+      _isOffline = result.contains(ConnectivityResult.none);
+    });
+
+    if (_isOffline && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          content: const Text(
+            "Bạn đang ngoại tuyến. Chỉ có thể nghe nhạc đã tải.",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     _musicController.currentItem.removeListener(_onItemChanged);
     _sleepTimer?.cancel();
+    _connectivitySubscription?.cancel();
     super.dispose();
   }
 
@@ -95,12 +188,21 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0x901E293B),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: const Text(
-          'Tá Tưởng',
-          style: TextStyle(
-            color: Colors.tealAccent,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            const Text(
+              'Tá Tưởng',
+              style: TextStyle(
+                color: Colors.tealAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (_isOffline)
+              const Padding(
+                padding: EdgeInsets.only(left: 8.0),
+                child: Icon(Icons.wifi_off, color: Colors.redAccent, size: 20),
+              ),
+          ],
         ),
         leading: IconButton(
           icon: const Icon(
@@ -112,7 +214,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.timer, color: Colors.tealAccent, size: 38),
+            icon: const Icon(
+              Icons.settings_outlined,
+              color: Colors.tealAccent,
+              size: 32,
+            ),
+            onPressed: _showSettingsBottomSheet,
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.timer_outlined,
+              color: Colors.tealAccent,
+              size: 38,
+            ),
             onPressed: _showSleepTimerBottomSheet,
           ),
           IconButton(
@@ -173,37 +287,40 @@ class _HomeScreenState extends State<HomeScreen> {
         ValueListenableBuilder<MediaItem?>(
           valueListenable: _musicController.currentItem,
           builder: (context, item, _) {
-            return Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                color: const Color(0xFF4B5563),
-                borderRadius: BorderRadius.circular(size / 2),
-                border: Border.all(color: Colors.tealAccent, width: 3),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(size / 2),
-                child: item?.extras?['is_online'] == true
-                    ? Image.network(
-                        item!.artUri.toString(),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
-                          Icons.music_note,
-                          size: 100,
-                          color: Colors.tealAccent,
-                        ),
-                      )
-                    : (_artworkBytes != null
-                          ? Image.memory(
-                              _artworkBytes!,
-                              fit: BoxFit.cover,
-                              gaplessPlayback: true,
-                            )
-                          : const Icon(
-                              Icons.music_note,
-                              size: 100,
-                              color: Colors.tealAccent,
-                            )),
+            return Hero(
+              tag: 'music_artwork',
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4B5563),
+                  borderRadius: BorderRadius.circular(size / 2),
+                  border: Border.all(color: Colors.tealAccent, width: 3),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(size / 2),
+                  child: item?.extras?['is_online'] == true
+                      ? Image.network(
+                          item!.artUri.toString(),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.music_note,
+                            size: 100,
+                            color: Colors.tealAccent,
+                          ),
+                        )
+                      : (_artworkBytes != null
+                            ? Image.memory(
+                                _artworkBytes!,
+                                fit: BoxFit.cover,
+                                gaplessPlayback: true,
+                              )
+                            : const Icon(
+                                Icons.music_note,
+                                size: 100,
+                                color: Colors.tealAccent,
+                              )),
+                ),
               ),
             );
           },
@@ -260,19 +377,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 // Thêm thông báo nhanh
                 String message = "";
-                IconData icon = Icons.repeat;
+                //IconData icon = Icons.repeat;
                 switch (nextMode) {
                   case LoopMode.off:
-                    message = "Tắt lặp lại";
-                    icon = Icons.repeat;
+                    message = "❌ Tắt lặp lại";
+                    //icon = Icons.repeat;
                     break;
                   case LoopMode.all:
-                    message = "Lặp lại tất cả";
-                    icon = Icons.repeat;
+                    message = "✅ Lặp lại tất cả";
+                    // icon = Icons.repeat;
                     break;
                   case LoopMode.one:
-                    message = "Lặp lại 1 bài";
-                    icon = Icons.repeat_one;
+                    message = "✅ Lặp lại 1 bài";
+                    //icon = Icons.repeat_one;
                     break;
                 }
 
@@ -287,8 +404,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     content: Row(
                       children: [
-                        Icon(icon, color: Colors.white),
-                        const SizedBox(width: 10),
+                        // Icon(icon, color: Colors.white),
+                        // const SizedBox(width: 10),
                         Text(
                           message,
                           style: const TextStyle(color: Colors.white),
@@ -544,6 +661,111 @@ class _HomeScreenState extends State<HomeScreen> {
         content: Text(
           "Nhạc sẽ tắt sau $minutes phút",
           style: const TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  void _showSettingsBottomSheet() {
+    showModalBottomSheet(
+      backgroundColor: const Color(0xFF2A2A3A),
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (c) => SafeArea(
+        bottom: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text(
+                "Cài đặt hệ thống",
+                style: TextStyle(
+                  color: Colors.tealAccent,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(color: Colors.tealAccent),
+            ListTile(
+              leading: const Icon(Icons.delete_sweep, color: Colors.tealAccent),
+              title: const Text(
+                "Tự động xóa bộ nhớ đệm",
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+              subtitle: Text(
+                "Hiện tại: $_cacheClearDays ngày",
+                style: const TextStyle(color: Colors.blueGrey),
+              ),
+              onTap: () {
+                Navigator.pop(c);
+                _showCacheDayPicker();
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.cleaning_services,
+                color: Colors.tealAccent,
+              ),
+              title: const Text(
+                "Xóa bộ nhớ đệm ngay lập tức",
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+              onTap: () async {
+                Navigator.pop(c);
+                await _clearAppCache();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: const Color(0xFF64B5F6),
+                      behavior: SnackBarBehavior.floating,
+                      content: const Text("Đã xóa sạch bộ nhớ đệm!"),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCacheDayPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2A2A3A),
+        title: const Text(
+          "Chọn thời gian tự động xóa",
+          style: TextStyle(color: Colors.tealAccent),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [3, 7, 15].map((days) {
+            return RadioListTile<int>(
+              title: Text(
+                "$days ngày",
+                style: const TextStyle(color: Colors.white),
+              ),
+              value: days,
+              groupValue: _cacheClearDays,
+              activeColor: Colors.tealAccent,
+              onChanged: (val) {
+                if (val != null) {
+                  _updateCacheSettings(val);
+                  Navigator.pop(context);
+                }
+              },
+            );
+          }).toList(),
         ),
       ),
     );

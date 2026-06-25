@@ -128,7 +128,7 @@ class OnlineMusicController {
 
       var audioStreamInfo = manifest.audioOnly.withHighestBitrate();
 
-      final realSource = AudioSource.uri(
+      final realSource = LockCachingAudioSource(
         audioStreamInfo.url,
         tag: MediaItem(
           id: video.id.value,

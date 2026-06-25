@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:text_scroll/text_scroll.dart';
+import 'package:shimmer/shimmer.dart';
 import 'music_controller.dart';
 import 'danh_sach_phat.dart';
 
@@ -252,6 +253,47 @@ class _TabBaiHatState extends State<TabBaiHat> {
     );
   }
 
+  Widget _buildSkeletonLoading() {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFF2A2A3A),
+      highlightColor: const Color(0xFF3F3F4F),
+      child: ListView.builder(
+        itemCount: 10,
+        itemBuilder: (context, index) {
+          return ListTile(
+            leading: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            title: Container(
+              height: 15,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Container(
+                height: 10,
+                width: 150,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -276,9 +318,7 @@ class _TabBaiHatState extends State<TabBaiHat> {
         ),
         Expanded(
           child: widget.isLoadingSongs
-              ? const Center(
-                  child: CircularProgressIndicator(color: Colors.tealAccent),
-                )
+              ? _buildSkeletonLoading()
               : Builder(
                   builder: (context) {
                     List<SongModel> songs = widget.allSongs
@@ -372,39 +412,42 @@ class _TabBaiHatState extends State<TabBaiHat> {
                                       ],
                                     ),
                                   ),
-                                  title: isPlayingThisSong
-                                      ? TextScroll(
-                                          songs[index].title,
-                                          mode: TextScrollMode.bouncing,
-                                          velocity: const Velocity(
-                                            pixelsPerSecond: Offset(30, 0),
-                                          ),
-                                          delayBefore: const Duration(
-                                            seconds: 2,
-                                          ),
-                                          pauseBetween: const Duration(
-                                            seconds: 2,
-                                          ),
+                                  title: TextScroll(
+                                    songs[index].title,
+                                    mode: TextScrollMode.bouncing,
+                                    velocity: const Velocity(
+                                      pixelsPerSecond: Offset(30, 0),
+                                    ),
+                                    delayBefore: const Duration(seconds: 2),
+                                    pauseBetween: const Duration(seconds: 2),
+                                    style: TextStyle(
+                                      color: isPlayingThisSong
+                                          ? Colors.tealAccent
+                                          : Colors.white,
+                                      fontWeight: isPlayingThisSong
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                  subtitle: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          songs[index].artist ?? "Không biết",
                                           style: const TextStyle(
                                             color: Colors.tealAccent,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        )
-                                      : Text(
-                                          songs[index].title,
-                                          style: const TextStyle(
-                                            color: Colors.white,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
-                                  subtitle: Text(
-                                    "${songs[index].artist ?? "Không biết"} • ${_formatDuration(songs[index].duration)}",
-                                    style: const TextStyle(
-                                      color: Colors.tealAccent,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        " • ${_formatDuration(songs[index].duration)}",
+                                        style: const TextStyle(
+                                          color: Colors.tealAccent,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   trailing: PopupMenuButton<int>(
                                     icon: const Icon(

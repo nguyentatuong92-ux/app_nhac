@@ -37,15 +37,18 @@ class MiniPlayer extends StatelessWidget {
                   child: Row(
                     children: [
                       const SizedBox(width: 10),
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(23),
-                          color: const Color(0xFF4B5563),
+                      Hero(
+                        tag: 'music_artwork',
+                        child: Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(23),
+                            color: const Color(0xFF4B5563),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: _buildArtwork(item),
                         ),
-                        clipBehavior: Clip.antiAlias,
-                        child: _buildArtwork(item),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

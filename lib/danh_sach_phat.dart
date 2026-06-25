@@ -169,34 +169,46 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                             ? Colors.tealAccent
                             : Colors.white,
                       ),
-                      title: isPlayingThisSong
-                          ? TextScroll(
-                              song.title,
-                              mode: TextScrollMode.bouncing,
-                              velocity: const Velocity(
-                                pixelsPerSecond: Offset(30, 0),
-                              ),
-                              delayBefore: const Duration(seconds: 2),
-                              pauseBetween: const Duration(seconds: 2),
-                              style: const TextStyle(
-                                color: Colors.tealAccent,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            )
-                          : Text(
-                              song.title,
-                              style: const TextStyle(color: Colors.white),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                      subtitle: Text(
-                        "${song.artist ?? "Không biết"} • ${_formatDuration(song.duration)}",
+                      title: TextScroll(
+                        song.title,
+                        mode: TextScrollMode.bouncing,
+                        velocity: const Velocity(
+                          pixelsPerSecond: Offset(30, 0),
+                        ),
+                        delayBefore: const Duration(seconds: 2),
+                        pauseBetween: const Duration(seconds: 2),
                         style: TextStyle(
                           color: isPlayingThisSong
                               ? Colors.tealAccent
                               : Colors.white,
+                          fontWeight: isPlayingThisSong
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
-                        maxLines: 1,
+                      ),
+                      subtitle: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              song.artist ?? "Không biết",
+                              style: TextStyle(
+                                color: isPlayingThisSong
+                                    ? Colors.tealAccent
+                                    : Colors.white,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            " • ${_formatDuration(song.duration)}",
+                            style: TextStyle(
+                              color: isPlayingThisSong
+                                  ? Colors.tealAccent
+                                  : Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                       trailing: IconButton(
                         icon: const Icon(

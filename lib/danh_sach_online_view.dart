@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:text_scroll/text_scroll.dart';
 import 'online_music_controller.dart';
 import 'home_screen.dart';
 
@@ -28,10 +29,8 @@ class _OnlinePlaylistDetailsScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: const Color(0x901E293B),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         title: const Text(
           'Danh sách nhạc Online',
           style: TextStyle(
@@ -39,6 +38,8 @@ class _OnlinePlaylistDetailsScreenState
             fontWeight: FontWeight.bold,
           ),
         ),
+        backgroundColor: const Color(0xFF1E293B),
+        iconTheme: const IconThemeData(color: Colors.tealAccent),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.tealAccent),
           onPressed: () => Navigator.pop(context),
@@ -88,22 +89,38 @@ class _OnlinePlaylistDetailsScreenState
                     fit: BoxFit.cover,
                   ),
                 ),
-                title: Text(
+                title: TextScroll(
                   video.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  mode: TextScrollMode.bouncing,
+                  velocity: const Velocity(pixelsPerSecond: Offset(30, 0)),
+                  delayBefore: const Duration(seconds: 2),
+                  pauseBetween: const Duration(seconds: 2),
                   style: TextStyle(
                     color: isPlaying ? Colors.tealAccent : Colors.white,
                     fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-                subtitle: Text(
-                  "${video.author} • ${_formatDuration(video.duration)}",
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: isPlaying ? Colors.tealAccent : Colors.grey[400],
-                  ),
+                subtitle: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        video.author,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: isPlaying
+                              ? Colors.tealAccent
+                              : Colors.grey[400],
+                        ),
+                      ),
+                    ),
+                    Text(
+                      " • ${_formatDuration(video.duration)}",
+                      style: TextStyle(
+                        color: isPlaying ? Colors.tealAccent : Colors.grey[400],
+                      ),
+                    ),
+                  ],
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
