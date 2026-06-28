@@ -115,6 +115,7 @@ class _ListViewScreenState extends State<ListViewScreen>
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     String appBarTitle = 'BÀI HÁT';
     if (_tabController.index == 1) {
       appBarTitle = 'DANH SÁCH';
@@ -123,14 +124,14 @@ class _ListViewScreenState extends State<ListViewScreen>
     }
 
     return Scaffold(
-      backgroundColor: const Color(0x901E293B),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
         title: Text(
           appBarTitle,
-          style: const TextStyle(
-            color: Colors.tealAccent,
+          style: TextStyle(
+            color: accentColor,
             letterSpacing: 3.0,
             fontSize: 28,
             fontWeight: FontWeight.bold,
@@ -141,7 +142,7 @@ class _ListViewScreenState extends State<ListViewScreen>
             isLabelVisible: _coBanCapNhatMoi,
             backgroundColor: Colors.redAccent,
             smallSize: 12,
-            child: const Icon(Icons.add_alert, color: Colors.tealAccent),
+            child: Icon(Icons.add_alert, color: accentColor),
           ),
           iconSize: 30,
           onPressed: () {
@@ -153,21 +154,21 @@ class _ListViewScreenState extends State<ListViewScreen>
             CapNhatService.kiemTra(context, showMessage: true);
           },
         ),
-        iconTheme: const IconThemeData(color: Colors.tealAccent),
+        iconTheme: IconThemeData(color: accentColor),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.tealAccent),
+            icon: Icon(Icons.refresh, color: accentColor),
             tooltip: 'Làm mới danh sách',
             onPressed: () {
               _loadSongs();
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: Color(0xFF64B5F6),
+                SnackBar(
+                  backgroundColor: const Color(0xFF64B5F6),
                   behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.all(Radius.circular(15.0)),
                   ),
-                  content: Text(
+                  content: const Text(
                     'Đang làm mới danh sách...',
                     style: TextStyle(color: Colors.black, fontSize: 18),
                   ),
@@ -178,9 +179,9 @@ class _ListViewScreenState extends State<ListViewScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.tealAccent,
-          unselectedLabelColor: Colors.tealAccent,
-          indicatorColor: Colors.tealAccent,
+          labelColor: accentColor,
+          unselectedLabelColor: accentColor,
+          indicatorColor: accentColor,
           labelPadding: const EdgeInsets.symmetric(horizontal: 4.0),
           tabs: const [
             Tab(
@@ -231,21 +232,22 @@ class _ListViewScreenState extends State<ListViewScreen>
   }
 
   Widget _buildPermissionUI() {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.folder_special, size: 80, color: Colors.tealAccent),
+          Icon(Icons.folder_special, size: 80, color: accentColor),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'Ứng dụng cần quyền đọc file\nđể tải danh sách bài hát.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+            style: TextStyle(color: accentColor, fontSize: 18),
           ),
           const SizedBox(height: 30),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.tealAccent,
+              backgroundColor: accentColor,
               foregroundColor: Colors.black,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
               shape: RoundedRectangleBorder(

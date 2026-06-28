@@ -96,9 +96,10 @@ class _TabBaiHatState extends State<TabBaiHat> {
   }
 
   void _showAddToPlaylistBottomSheet(SongModel song) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF2A2A3A),
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -107,20 +108,20 @@ class _TabBaiHatState extends State<TabBaiHat> {
           future: widget.audioQuery.queryPlaylists(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox(
+              return SizedBox(
                 height: 100,
                 child: Center(
-                  child: CircularProgressIndicator(color: Colors.tealAccent),
+                  child: CircularProgressIndicator(color: accentColor),
                 ),
               );
             }
             if (snapshot.data == null || snapshot.data!.isEmpty) {
-              return const SizedBox(
+              return SizedBox(
                 height: 100,
                 child: Center(
                   child: Text(
                     "Chưa có danh sách phát nào.",
-                    style: TextStyle(color: Colors.tealAccent),
+                    style: TextStyle(color: accentColor),
                   ),
                 ),
               );
@@ -132,13 +133,10 @@ class _TabBaiHatState extends State<TabBaiHat> {
               itemCount: playlists.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  leading: const Icon(
-                    Icons.queue_music,
-                    color: Colors.tealAccent,
-                  ),
+                  leading: Icon(Icons.queue_music, color: accentColor),
                   title: Text(
                     playlists[index].playlist,
-                    style: const TextStyle(color: Colors.tealAccent),
+                    style: TextStyle(color: accentColor),
                   ),
                   onTap: () async {
                     await widget.audioQuery.addToPlaylist(
@@ -178,25 +176,25 @@ class _TabBaiHatState extends State<TabBaiHat> {
   }
 
   void _showDeleteConfirmDialog(SongModel song) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A3A),
-          title: const Text(
-            'Xác nhận xóa',
-            style: TextStyle(color: Colors.tealAccent),
-          ),
+          backgroundColor: Theme.of(context).cardColor,
+          title: Text('Xác nhận xóa', style: TextStyle(color: accentColor)),
           content: Text(
             'Bạn có chắc chắn muốn xóa bài hát "${song.title}" khỏi thiết bị không? Hành động này không thể hoàn tác.',
-            style: const TextStyle(color: Colors.tealAccent),
+            style: TextStyle(
+              color: Theme.of(context).textTheme.bodyMedium?.color,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
+              child: Text(
                 'Hủy',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
+                style: TextStyle(color: accentColor, fontSize: 20),
               ),
             ),
             TextButton(
@@ -255,8 +253,8 @@ class _TabBaiHatState extends State<TabBaiHat> {
 
   Widget _buildSkeletonLoading() {
     return Shimmer.fromColors(
-      baseColor: const Color(0xFF2A2A3A),
-      highlightColor: const Color(0xFF3F3F4F),
+      baseColor: Theme.of(context).cardColor,
+      highlightColor: Theme.of(context).dividerColor,
       child: ListView.builder(
         itemCount: 10,
         itemBuilder: (context, index) {
@@ -296,20 +294,21 @@ class _TabBaiHatState extends State<TabBaiHat> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Row(
                 children: [
-                  Icon(Icons.sort, color: Colors.tealAccent, size: 20),
-                  SizedBox(width: 8),
+                  Icon(Icons.sort, color: accentColor, size: 20),
+                  const SizedBox(width: 8),
                   Text(
                     "Tên Bài Hát",
-                    style: TextStyle(color: Colors.tealAccent, fontSize: 18),
+                    style: TextStyle(color: accentColor, fontSize: 18),
                   ),
                 ],
               ),
@@ -326,10 +325,10 @@ class _TabBaiHatState extends State<TabBaiHat> {
                         .toList();
 
                     if (songs.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
                           'Không có bài hát nào.',
-                          style: TextStyle(color: Colors.tealAccent),
+                          style: TextStyle(color: accentColor),
                         ),
                       );
                     }
@@ -398,12 +397,13 @@ class _TabBaiHatState extends State<TabBaiHat> {
                                             ),
                                             child: Icon(
                                               Icons.play_circle_outline,
-                                              color: Colors.tealAccent,
+                                              color: accentColor,
                                               size: 28,
                                               shadows: [
                                                 Shadow(
-                                                  color: Colors.tealAccent
-                                                      .withAlpha(204),
+                                                  color: accentColor.withValues(
+                                                    alpha: 0.8,
+                                                  ),
                                                   blurRadius: 10.0,
                                                 ),
                                               ],
@@ -422,8 +422,10 @@ class _TabBaiHatState extends State<TabBaiHat> {
                                     pauseBetween: const Duration(seconds: 2),
                                     style: TextStyle(
                                       color: isPlayingThisSong
-                                          ? Colors.tealAccent
-                                          : Colors.white,
+                                          ? accentColor
+                                          : Theme.of(
+                                              context,
+                                            ).textTheme.bodyLarge?.color,
                                       fontWeight: isPlayingThisSong
                                           ? FontWeight.bold
                                           : FontWeight.normal,
@@ -434,27 +436,23 @@ class _TabBaiHatState extends State<TabBaiHat> {
                                       Expanded(
                                         child: Text(
                                           songs[index].artist ?? "Không biết",
-                                          style: const TextStyle(
-                                            color: Colors.tealAccent,
-                                          ),
+                                          style: TextStyle(color: accentColor),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
                                       Text(
                                         " • ${_formatDuration(songs[index].duration)}",
-                                        style: const TextStyle(
-                                          color: Colors.tealAccent,
-                                        ),
+                                        style: TextStyle(color: accentColor),
                                       ),
                                     ],
                                   ),
                                   trailing: PopupMenuButton<int>(
-                                    icon: const Icon(
+                                    icon: Icon(
                                       Icons.more_vert,
-                                      color: Colors.tealAccent,
+                                      color: accentColor,
                                     ),
-                                    color: const Color(0xFF1E293B),
+                                    color: Theme.of(context).cardColor,
                                     shape: const RoundedRectangleBorder(
                                       borderRadius: BorderRadius.all(
                                         Radius.circular(20.0),
@@ -470,22 +468,22 @@ class _TabBaiHatState extends State<TabBaiHat> {
                                       }
                                     },
                                     itemBuilder: (context) => [
-                                      const PopupMenuItem(
+                                      PopupMenuItem(
                                         value: 1,
                                         child: Text(
                                           'Thêm vào danh sách phát',
                                           style: TextStyle(
-                                            color: Colors.tealAccent,
+                                            color: accentColor,
                                             fontSize: 18,
                                           ),
                                         ),
                                       ),
-                                      const PopupMenuItem(
+                                      PopupMenuItem(
                                         value: 2,
                                         child: Text(
                                           'Xóa bài hát',
                                           style: TextStyle(
-                                            color: Colors.tealAccent,
+                                            color: accentColor,
                                             fontSize: 18,
                                           ),
                                         ),
@@ -529,9 +527,7 @@ class _TabBaiHatState extends State<TabBaiHat> {
                                         vertical: 8.0,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF2A2A3A,
-                                        ).withAlpha(242),
+                                        color: Theme.of(context).cardColor,
                                         borderRadius: BorderRadius.circular(
                                           20.0,
                                         ),
@@ -559,8 +555,10 @@ class _TabBaiHatState extends State<TabBaiHat> {
                                                   style: TextStyle(
                                                     color: isSelected
                                                         ? Colors.white
-                                                        : Colors.tealAccent
-                                                              .withAlpha(128),
+                                                        : accentColor
+                                                              .withValues(
+                                                                alpha: 0.5,
+                                                              ),
                                                     fontWeight: isSelected
                                                         ? FontWeight.bold
                                                         : FontWeight.normal,

@@ -85,33 +85,34 @@ class _ChonNhieuBaiHatScreenState extends State<ChonNhieuBaiHatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      backgroundColor: Color(0x901E293B),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Color(0xFF1E293B),
-        iconTheme: const IconThemeData(color: Colors.tealAccent),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: IconThemeData(color: accentColor),
         // Hiển thị số lượng bài hát đang được chọn
         title: Text(
           'Đã chọn ${_danhSachChon.length} bài',
-          style: const TextStyle(color: Colors.tealAccent),
+          style: TextStyle(color: accentColor),
         ),
         actions: [
           // Chỉ hiện nút Thêm khi có ít nhất 1 bài được chọn
           if (_danhSachChon.isNotEmpty)
             _dangXuLy
-                ? const Padding(
-                    padding: EdgeInsets.all(16.0),
+                ? Padding(
+                    padding: const EdgeInsets.all(16.0),
                     child: SizedBox(
                       width: 24,
                       height: 24,
                       child: CircularProgressIndicator(
-                        color: Colors.tealAccent,
+                        color: accentColor,
                         strokeWidth: 2,
                       ),
                     ),
                   )
                 : IconButton(
-                    icon: const Icon(Icons.check, size: 30),
+                    icon: Icon(Icons.check, size: 30, color: accentColor),
                     tooltip: 'Thêm vào danh sách',
                     onPressed: _themVaoDanhSachPhat,
                   ),
@@ -119,14 +120,12 @@ class _ChonNhieuBaiHatScreenState extends State<ChonNhieuBaiHatScreen> {
       ),
       // SỬA ĐỔI: Thay FutureBuilder bằng cách kiểm tra biến _isLoading
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.tealAccent),
-            )
+          ? Center(child: CircularProgressIndicator(color: accentColor))
           : _songs.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Không có bài hát nào.',
-                style: TextStyle(color: Colors.tealAccent),
+                style: TextStyle(color: accentColor),
               ),
             )
           : ListView.builder(
@@ -139,30 +138,38 @@ class _ChonNhieuBaiHatScreenState extends State<ChonNhieuBaiHatScreen> {
                 final isSelected = _danhSachChon.contains(song.id);
 
                 return CheckboxListTile(
-                  activeColor: Colors.tealAccent,
+                  activeColor: accentColor,
                   // Màu khi được tick
-                  checkColor: Colors.black,
+                  checkColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.black
+                      : Colors.white,
                   // Màu của dấu tick
-                  side: const BorderSide(color: Colors.grey),
+                  side: BorderSide(color: Theme.of(context).dividerColor),
                   // Màu viền ô vuông
                   title: Text(
                     song.title,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text(
                     "${song.artist ?? "Không biết"} • ${_formatDuration(song.duration)}",
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   secondary: QueryArtworkWidget(
                     id: song.id,
                     type: ArtworkType.AUDIO,
-                    nullArtworkWidget: const Icon(
+                    nullArtworkWidget: Icon(
                       Icons.music_note,
-                      color: Colors.tealAccent,
+                      color: accentColor,
                     ),
                   ),
                   value: isSelected,

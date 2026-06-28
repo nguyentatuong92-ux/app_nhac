@@ -10,6 +10,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'theme_provider.dart';
 import 'danh_sach_dang_phat.dart';
 import 'music_controller.dart';
 
@@ -184,18 +186,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final double artworkSize = (screenWidth * 0.75).clamp(200.0, 350.0);
 
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      backgroundColor: const Color(0x901E293B),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Row(
           children: [
-            const Text(
+            Text(
               'Tá Tưởng',
-              style: TextStyle(
-                color: Colors.tealAccent,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
             ),
             if (_isOffline)
               const Padding(
@@ -205,34 +205,23 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         leading: IconButton(
-          icon: const Icon(
-            Icons.keyboard_arrow_left_sharp,
-            color: Colors.tealAccent,
-          ),
+          icon: Icon(Icons.keyboard_arrow_left_sharp, color: accentColor),
           iconSize: 50,
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.settings_outlined,
-              color: Colors.tealAccent,
-              size: 32,
-            ),
+            icon: Icon(Icons.settings_outlined, color: accentColor, size: 32),
             onPressed: _showSettingsBottomSheet,
           ),
           IconButton(
-            icon: const Icon(
-              Icons.timer_outlined,
-              color: Colors.tealAccent,
-              size: 38,
-            ),
+            icon: Icon(Icons.timer_outlined, color: accentColor, size: 38),
             onPressed: _showSleepTimerBottomSheet,
           ),
           IconButton(
             icon: Icon(
               _showVolumeSlider ? Icons.volume_up : Icons.volume_down,
-              color: Colors.tealAccent,
+              color: accentColor,
               size: 38,
             ),
             onPressed: () =>
@@ -247,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               if (_showVolumeSlider)
                 Slider(
-                  activeColor: Colors.tealAccent,
+                  activeColor: accentColor,
                   inactiveColor: Colors.grey[800],
                   value: _currentVolume,
                   onChanged: (v) {
@@ -256,23 +245,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
               const Spacer(),
-              _buildArtworkSection(artworkSize),
+              _buildArtworkSection(artworkSize, accentColor),
               const SizedBox(height: 20),
               ValueListenableBuilder<MediaItem?>(
                 valueListenable: _musicController.currentItem,
                 builder: (context, item, _) => TextScroll(
                   item?.title ?? "Đang phát",
-                  style: const TextStyle(
-                    color: Colors.tealAccent,
-                    fontSize: 24,
-                  ),
+                  style: TextStyle(color: accentColor, fontSize: 24),
                 ),
               ),
               const Spacer(),
-              _buildControlsRow(),
+              _buildControlsRow(accentColor),
               const SizedBox(height: 15),
-              _buildProgressSlider(),
-              _buildPlaybackButtons(),
+              _buildProgressSlider(accentColor),
+              _buildPlaybackButtons(accentColor),
             ],
           ),
         ),
@@ -280,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildArtworkSection(double size) {
+  Widget _buildArtworkSection(double size, Color accentColor) {
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -295,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF4B5563),
                   borderRadius: BorderRadius.circular(size / 2),
-                  border: Border.all(color: Colors.tealAccent, width: 3),
+                  border: Border.all(color: accentColor, width: 3),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(size / 2),
@@ -303,10 +289,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? Image.network(
                           item!.artUri.toString(),
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(
+                          errorBuilder: (_, __, ___) => Icon(
                             Icons.music_note,
                             size: 100,
-                            color: Colors.tealAccent,
+                            color: accentColor,
                           ),
                         )
                       : (_artworkBytes != null
@@ -315,10 +301,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 fit: BoxFit.cover,
                                 gaplessPlayback: true,
                               )
-                            : const Icon(
+                            : Icon(
                                 Icons.music_note,
                                 size: 100,
-                                color: Colors.tealAccent,
+                                color: accentColor,
                               )),
                 ),
               ),
@@ -331,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final state = snapshot.data;
             if (state == ProcessingState.loading ||
                 state == ProcessingState.buffering) {
-              return CircularProgressIndicator(color: Colors.tealAccent);
+              return CircularProgressIndicator(color: accentColor);
             }
             return const SizedBox.shrink();
           },
@@ -340,16 +326,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildControlsRow() {
+  Widget _buildControlsRow(Color accentColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         IconButton(
-          icon: const Icon(
-            Icons.queue_music,
-            color: Colors.tealAccent,
-            size: 30,
-          ),
+          icon: Icon(Icons.queue_music, color: accentColor, size: 30),
           onPressed: () =>
               DanhSachDangPhat.show(context, _musicController.audioPlayer),
         ),
@@ -364,9 +346,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     : (loopMode == LoopMode.all
                           ? Icons.repeat
                           : Icons.repeat_one),
-                color: loopMode == LoopMode.off
-                    ? Colors.grey
-                    : Colors.tealAccent,
+                color: loopMode == LoopMode.off ? Colors.grey : accentColor,
                 size: 30,
               ),
               onPressed: () {
@@ -422,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildProgressSlider() {
+  Widget _buildProgressSlider(Color accentColor) {
     return StreamBuilder<Duration>(
       stream: _musicController.audioPlayer.positionStream,
       builder: (context, snapshot) {
@@ -431,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Column(
           children: [
             Slider(
-              activeColor: Colors.tealAccent,
+              activeColor: accentColor,
               inactiveColor: Colors.grey[800],
               value: pos.inSeconds.toDouble().clamp(
                 0,
@@ -451,17 +431,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     _formatDuration(pos),
-                    style: const TextStyle(
-                      color: Colors.tealAccent,
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(color: accentColor, fontSize: 18),
                   ),
                   Text(
                     _formatDuration(dur),
-                    style: const TextStyle(
-                      color: Colors.tealAccent,
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(color: accentColor, fontSize: 18),
                   ),
                 ],
               ),
@@ -472,16 +446,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildPlaybackButtons() {
+  Widget _buildPlaybackButtons(Color accentColor) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         IconButton(
-          icon: const Icon(
-            Icons.skip_previous,
-            size: 50,
-            color: Colors.tealAccent,
-          ),
+          icon: Icon(Icons.skip_previous, size: 50, color: accentColor),
           onPressed: () => _musicController.audioPlayer.seekToPrevious(),
         ),
         ValueListenableBuilder<bool>(
@@ -489,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, playing, _) => IconButton(
             icon: Icon(
               playing ? Icons.pause_circle : Icons.play_circle,
-              color: Colors.tealAccent,
+              color: accentColor,
               size: 70,
             ),
             onPressed: () => playing
@@ -498,7 +468,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.skip_next, size: 50, color: Colors.tealAccent),
+          icon: Icon(Icons.skip_next, size: 50, color: accentColor),
           onPressed: () => _musicController.audioPlayer.seekToNext(),
         ),
       ],
@@ -507,7 +477,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showSleepTimerBottomSheet() {
     showModalBottomSheet(
-      backgroundColor: const Color(0xFF2A2A3A),
+      backgroundColor: Theme.of(context).cardColor,
       context: context,
       isScrollControlled:
           true, // Cho phép bottom sheet co giãn khi hiện bàn phím
@@ -528,20 +498,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: EdgeInsets.symmetric(vertical: 20),
                 child: Text(
                   "Hẹn giờ tắt nhạc",
-                  style: TextStyle(
-                    color: Colors.tealAccent,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ),
-              const Divider(color: Colors.tealAccent, height: 1),
+              const Divider(height: 1),
               ...[15, 30, 50].map(
                 (m) => ListTile(
                   title: Text(
                     "$m Phút",
                     style: const TextStyle(
-                      color: Colors.tealAccent,
                       fontSize: 20,
                       fontWeight: FontWeight.w500,
                     ),
@@ -553,14 +518,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.edit, color: Colors.tealAccent),
+                leading: const Icon(Icons.edit),
                 title: const Text(
                   "Tùy chọn thời gian",
-                  style: TextStyle(
-                    color: Colors.tealAccent,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
                 ),
                 onTap: () {
                   Navigator.pop(c);
@@ -576,29 +537,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCustomTimerDialog() {
+    final accentColor = Theme.of(context).colorScheme.primary;
     final TextEditingController controller = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A3A),
+        backgroundColor: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: const Text(
-          "Nhập số phút",
-          style: TextStyle(color: Colors.tealAccent),
-        ),
+        title: Text("Nhập số phút", style: TextStyle(color: accentColor)),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
           autofocus: true,
-          style: const TextStyle(color: Colors.tealAccent),
-          decoration: const InputDecoration(
+          style: TextStyle(color: accentColor),
+          decoration: InputDecoration(
             hintText: "Nhập thời gian (phút)",
-            hintStyle: TextStyle(color: Colors.grey),
-            enabledBorder: UnderlineInputBorder(
+            hintStyle: const TextStyle(color: Colors.grey),
+            enabledBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.grey),
             ),
             focusedBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.tealAccent),
+              borderSide: BorderSide(color: accentColor),
             ),
           ),
         ),
@@ -615,10 +574,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _setSleepTimer(m);
               }
             },
-            child: const Text(
-              "Hẹn giờ",
-              style: TextStyle(color: Colors.tealAccent),
-            ),
+            child: Text("Hẹn giờ", style: TextStyle(color: accentColor)),
           ),
         ],
       ),
@@ -668,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showSettingsBottomSheet() {
     showModalBottomSheet(
-      backgroundColor: const Color(0xFF2A2A3A),
+      backgroundColor: Theme.of(context).cardColor,
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
@@ -682,45 +638,98 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.all(20),
               child: Text(
                 "Cài đặt hệ thống",
-                style: TextStyle(
-                  color: Colors.tealAccent,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const Divider(),
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, _) {
+                return SwitchListTile(
+                  title: const Text("Chế độ tối"),
+                  secondary: const Icon(Icons.dark_mode),
+                  value: themeProvider.isDarkMode,
+                  onChanged: (val) => themeProvider.toggleTheme(),
+                );
+              },
+            ),
+            const Divider(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Màu sắc chủ đạo",
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
             ),
-            const Divider(color: Colors.tealAccent),
+            SizedBox(
+              height: 50,
+              child: Consumer<ThemeProvider>(
+                builder: (context, themeProvider, _) {
+                  return ListView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    children:
+                        [
+                          Colors.tealAccent,
+                          Colors.blueAccent,
+                          Colors.pinkAccent,
+                          Colors.orangeAccent,
+                          Colors.purpleAccent,
+                          themeProvider.isDarkMode
+                              ? Colors.white70
+                              : Colors.black,
+                          Colors.lightGreenAccent,
+                        ].map((color) {
+                          final isSelected =
+                              themeProvider.accentColor.toARGB32() ==
+                              color.toARGB32();
+                          return GestureDetector(
+                            onTap: () => themeProvider.setAccentColor(color),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: color,
+                                shape: BoxShape.circle,
+                                border: isSelected
+                                    ? Border.all(
+                                        color: themeProvider.isDarkMode
+                                            ? Colors.white
+                                            : Colors.black,
+                                        width: 3,
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  );
+                },
+              ),
+            ),
+            const Divider(),
             ListTile(
-              leading: const Icon(Icons.delete_sweep, color: Colors.tealAccent),
-              title: const Text(
-                "Tự động xóa bộ nhớ đệm",
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
-              subtitle: Text(
-                "Hiện tại: $_cacheClearDays ngày",
-                style: const TextStyle(color: Colors.blueGrey),
-              ),
+              leading: const Icon(Icons.delete_sweep),
+              title: const Text("Tự động xóa bộ nhớ đệm"),
+              subtitle: Text("Hiện tại: $_cacheClearDays ngày"),
               onTap: () {
                 Navigator.pop(c);
                 _showCacheDayPicker();
               },
             ),
             ListTile(
-              leading: const Icon(
-                Icons.cleaning_services,
-                color: Colors.tealAccent,
-              ),
-              title: const Text(
-                "Xóa bộ nhớ đệm ngay lập tức",
-                style: TextStyle(color: Colors.white, fontSize: 18),
-              ),
+              leading: const Icon(Icons.cleaning_services),
+              title: const Text("Xóa bộ nhớ đệm ngay lập tức"),
               onTap: () async {
                 Navigator.pop(c);
                 await _clearAppCache();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      backgroundColor: const Color(0xFF64B5F6),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       behavior: SnackBarBehavior.floating,
                       content: const Text("Đã xóa sạch bộ nhớ đệm!"),
                       shape: RoundedRectangleBorder(
@@ -739,13 +748,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCacheDayPicker() {
+    final accentColor = Theme.of(context).colorScheme.primary;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A3A),
-        title: const Text(
+        backgroundColor: Theme.of(context).cardColor,
+        title: Text(
           "Chọn thời gian tự động xóa",
-          style: TextStyle(color: Colors.tealAccent),
+          style: TextStyle(color: accentColor),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -753,11 +763,13 @@ class _HomeScreenState extends State<HomeScreen> {
             return RadioListTile<int>(
               title: Text(
                 "$days ngày",
-                style: const TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
               ),
               value: days,
               groupValue: _cacheClearDays,
-              activeColor: Colors.tealAccent,
+              activeColor: accentColor,
               onChanged: (val) {
                 if (val != null) {
                   _updateCacheSettings(val);

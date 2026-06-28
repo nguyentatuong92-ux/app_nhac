@@ -103,13 +103,12 @@ class OnlineMusicController {
 
     if (showLoading && context.mounted) {
       dialogOpened = true;
+      final accentColor = Theme.of(context).colorScheme.primary;
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.tealAccent),
-          );
+          return Center(child: CircularProgressIndicator(color: accentColor));
         },
       );
     }
@@ -211,6 +210,7 @@ class OnlineMusicController {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setStateDialog) {
+          final accentColor = Theme.of(context).colorScheme.primary;
           return AlertDialog(
             backgroundColor: const Color(0xFF2A2A3A),
             shape: RoundedRectangleBorder(
@@ -238,7 +238,7 @@ class OnlineMusicController {
                         value: progress,
                         backgroundColor: Colors.grey[700],
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          isPaused ? Colors.teal : Colors.tealAccent,
+                          isPaused ? Colors.teal : accentColor,
                         ),
                         minHeight: 10,
                       ),
@@ -247,7 +247,7 @@ class OnlineMusicController {
                     Text(
                       "${(progress * 100).toStringAsFixed(1)}%",
                       style: TextStyle(
-                        color: isPaused ? Colors.teal : Colors.tealAccent,
+                        color: isPaused ? Colors.teal : accentColor,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -308,7 +308,7 @@ class OnlineMusicController {
                 child: Text(
                   isPaused ? "Tiếp tục" : "Tạm dừng",
                   style: TextStyle(
-                    color: isPaused ? Colors.tealAccent : Colors.blueGrey,
+                    color: isPaused ? accentColor : Colors.blueGrey,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),

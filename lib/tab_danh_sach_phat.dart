@@ -18,28 +18,29 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
   final MusicController _musicController = MusicController();
 
   void _showCreatePlaylistDialog() {
+    final accentColor = Theme.of(context).colorScheme.primary;
     TextEditingController controller = TextEditingController();
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF2A2A3A),
-          title: const Text(
+          backgroundColor: Theme.of(context).cardColor,
+          title: Text(
             'Tạo Danh Sách Mới',
-            style: TextStyle(color: Colors.tealAccent),
+            style: TextStyle(color: accentColor),
           ),
           content: SingleChildScrollView(
             child: TextField(
               controller: controller,
-              style: const TextStyle(color: Colors.tealAccent),
-              decoration: const InputDecoration(
+              style: TextStyle(color: accentColor),
+              decoration: InputDecoration(
                 hintText: 'Nhập tên danh sách...',
-                hintStyle: TextStyle(color: Colors.tealAccent),
-                enabledBorder: UnderlineInputBorder(
+                hintStyle: TextStyle(color: accentColor),
+                enabledBorder: const UnderlineInputBorder(
                   borderSide: BorderSide(color: Colors.grey),
                 ),
                 focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.tealAccent),
+                  borderSide: BorderSide(color: accentColor),
                 ),
               ),
             ),
@@ -47,9 +48,9 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text(
+              child: Text(
                 'Hủy',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
+                style: TextStyle(color: accentColor, fontSize: 20),
               ),
             ),
             TextButton(
@@ -60,9 +61,9 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
                   if (context.mounted) Navigator.pop(context);
                 }
               },
-              child: const Text(
+              child: Text(
                 'Tạo',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 20),
+                style: TextStyle(color: accentColor, fontSize: 20),
               ),
             ),
           ],
@@ -102,28 +103,25 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Column(
       children: [
         ValueListenableBuilder<List>(
           valueListenable: OnlineMusicController.onlinePlaylist,
           builder: (context, playlist, _) {
             return ListTile(
-              leading: const Icon(
-                Icons.language,
-                color: Colors.tealAccent,
-                size: 40,
-              ),
-              title: const Text(
+              leading: Icon(Icons.language, color: accentColor, size: 40),
+              title: Text(
                 'Danh sách nhạc Online',
                 style: TextStyle(
-                  color: Colors.tealAccent,
+                  color: accentColor,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               subtitle: Text(
                 '${playlist.length} bài hát được thêm',
-                style: const TextStyle(color: Colors.tealAccent),
+                style: TextStyle(color: accentColor),
               ),
               onTap: () {
                 Navigator.push(
@@ -138,38 +136,34 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
             );
           },
         ),
-        const Divider(color: Colors.tealAccent, height: 1),
+        Divider(color: accentColor, height: 1),
         ListTile(
-          leading: const Icon(
-            Icons.add_circle,
-            color: Colors.tealAccent,
-            size: 40,
-          ),
-          title: const Text(
+          leading: Icon(Icons.add_circle, color: accentColor, size: 40),
+          title: Text(
             'Tạo danh sách phát mới',
             style: TextStyle(
-              color: Colors.tealAccent,
+              color: accentColor,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
           onTap: _showCreatePlaylistDialog,
         ),
-        const Divider(color: Colors.tealAccent, height: 1),
+        Divider(color: accentColor, height: 1),
         Expanded(
           child: FutureBuilder<List<PlaylistModel>>(
             future: widget.audioQuery.queryPlaylists(),
             builder: (context, item) {
               if (item.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: Colors.tealAccent),
+                return Center(
+                  child: CircularProgressIndicator(color: accentColor),
                 );
               }
               if (item.data == null || item.data!.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
                     'Chưa có danh sách phát.',
-                    style: TextStyle(color: Colors.tealAccent, fontSize: 22),
+                    style: TextStyle(color: accentColor, fontSize: 22),
                   ),
                 );
               }
@@ -185,17 +179,14 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
                   }
 
                   return ListTile(
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.queue_music,
-                      color: Colors.tealAccent,
+                      color: accentColor,
                       size: 40,
                     ),
                     title: Text(
                       playlists[index].playlist,
-                      style: const TextStyle(
-                        color: Colors.tealAccent,
-                        fontSize: 18,
-                      ),
+                      style: TextStyle(color: accentColor, fontSize: 18),
                     ),
                     subtitle: FutureBuilder<String>(
                       future: _getPlaylistTotalDuration(playlists[index].id),
@@ -203,7 +194,7 @@ class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
                         String timeString = snapshot.data ?? "";
                         return Text(
                           '$songCount bài hát$timeString',
-                          style: const TextStyle(color: Colors.tealAccent),
+                          style: TextStyle(color: accentColor),
                         );
                       },
                     ),

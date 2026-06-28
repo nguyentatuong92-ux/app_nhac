@@ -28,20 +28,18 @@ class _OnlinePlaylistDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      backgroundColor: const Color(0x901E293B),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Danh sách nhạc Online',
-          style: TextStyle(
-            color: Colors.tealAccent,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF1E293B),
-        iconTheme: const IconThemeData(color: Colors.tealAccent),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: IconThemeData(color: accentColor),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.tealAccent),
+          icon: Icon(Icons.arrow_back, color: accentColor),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -96,7 +94,9 @@ class _OnlinePlaylistDetailsScreenState
                   delayBefore: const Duration(seconds: 2),
                   pauseBetween: const Duration(seconds: 2),
                   style: TextStyle(
-                    color: isPlaying ? Colors.tealAccent : Colors.white,
+                    color: isPlaying
+                        ? accentColor
+                        : Theme.of(context).textTheme.bodyLarge?.color,
                     fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
@@ -109,15 +109,19 @@ class _OnlinePlaylistDetailsScreenState
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: isPlaying
-                              ? Colors.tealAccent
-                              : Colors.grey[400],
+                              ? accentColor
+                              : Theme.of(context).textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.7),
                         ),
                       ),
                     ),
                     Text(
                       " • ${_formatDuration(video.duration)}",
                       style: TextStyle(
-                        color: isPlaying ? Colors.tealAccent : Colors.grey[400],
+                        color: isPlaying
+                            ? accentColor
+                            : Theme.of(context).textTheme.bodyMedium?.color
+                                  ?.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -125,8 +129,7 @@ class _OnlinePlaylistDetailsScreenState
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (isPlaying)
-                      const Icon(Icons.equalizer, color: Colors.tealAccent),
+                    if (isPlaying) Icon(Icons.equalizer, color: accentColor),
                     IconButton(
                       icon: const Icon(
                         Icons.delete,

@@ -1,8 +1,10 @@
 // File: lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:just_audio_background/just_audio_background.dart'; // 1. Import thư viện chạy ngầm
+import 'package:provider/provider.dart';
 import 'list_view.dart';
 import 'music_controller.dart';
+import 'theme_provider.dart';
 
 // 2. Chuyển hàm main thành bất đồng bộ (async)
 Future<void> main() async {
@@ -22,7 +24,12 @@ Future<void> main() async {
     androidShowNotificationBadge: true,
     androidStopForegroundOnPause: true,
   );
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -30,20 +37,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ứng Dụng Nhạc',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFF1E293B),
-        canvasColor: const Color(0xFF1E293B),
-        // KẾT THÚC PHẦN THÊM MỚI
-      ),
-      home: const ListViewScreen(), // Mở màn hình danh sách đầu tiên
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'Ứng Dụng Nhạc',
+          debugShowCheckedModeBanner: false,
+          theme: themeProvider.themeData,
+          home: const ListViewScreen(), // Mở màn hình danh sách đầu tiên
+        );
+      },
     );
   }
 }

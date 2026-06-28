@@ -5,6 +5,8 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:provider/provider.dart';
+import 'theme_provider.dart';
 import 'dart:async';
 import 'music_controller.dart';
 import 'online_music_controller.dart';
@@ -107,6 +109,7 @@ class _TabOnlineState extends State<TabOnline>
   Future<void> _searchMusic(String query) async {
     if (query.trim().isEmpty || _isOffline) return;
     _focusNode.unfocus();
+    setState(() => _showHistory = false);
     _saveSearchQuery(query);
     setState(() => _isLoading = true);
 
@@ -127,9 +130,28 @@ class _TabOnlineState extends State<TabOnline>
           OnlineMusicController.searchResults = allResults;
           _isLoading = false;
         });
+
+        if (allResults.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Không tìm thấy kết quả nào."),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      debugPrint("Lỗi tìm kiếm: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Lỗi khi tìm kiếm: ${e.toString()}"),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -151,7 +173,7 @@ class _TabOnlineState extends State<TabOnline>
         if (_isOffline)
           Container(
             width: double.infinity,
-            color: Colors.redAccent.withOpacity(0.8),
+            color: Colors.redAccent.withValues(alpha: 0.8),
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: const Text(
               "Mất kết nối internet. Vui lòng kiểm tra lại mạng.",
@@ -187,6 +209,7 @@ class _TabOnlineState extends State<TabOnline>
   }
 
   Widget _buildSearchField() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return Column(
       children: [
         Padding(
@@ -195,17 +218,20 @@ class _TabOnlineState extends State<TabOnline>
             controller: _searchController,
             focusNode: _focusNode,
             enabled: !_isOffline,
-            onSubmitted: _searchMusic,
-            style: const TextStyle(color: Colors.tealAccent),
+            textInputAction: TextInputAction.search,
+            onSubmitted: (value) => _searchMusic(value),
+            style: TextStyle(color: themeProvider.accentColor),
             decoration: InputDecoration(
               hintText: _isOffline
                   ? "Bạn đang ngoại tuyến"
                   : "Vui lòng nhập bài hát...",
               hintStyle: const TextStyle(color: Colors.blueGrey),
               filled: true,
-              fillColor: const Color(0xFF2A2A3A),
+              fillColor: themeProvider.isDarkMode
+                  ? const Color(0xFF2A2A3A)
+                  : Colors.grey[200],
               prefixIcon: IconButton(
-                icon: const Icon(Icons.search, color: Colors.tealAccent),
+                icon: Icon(Icons.search, color: themeProvider.accentColor),
                 onPressed: _isOffline
                     ? null
                     : () {
@@ -214,7 +240,7 @@ class _TabOnlineState extends State<TabOnline>
                       },
               ),
               suffixIcon: IconButton(
-                icon: const Icon(Icons.clear, color: Colors.tealAccent),
+                icon: Icon(Icons.clear, color: themeProvider.accentColor),
                 onPressed: () {
                   _searchController.clear();
                   if (!_isOffline) {
@@ -236,11 +262,13 @@ class _TabOnlineState extends State<TabOnline>
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: const Color(0xFF2A2A3A),
+              color: themeProvider.isDarkMode
+                  ? const Color(0xFF2A2A3A)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -286,7 +314,11 @@ class _TabOnlineState extends State<TabOnline>
                       ),
                       title: Text(
                         item,
-                        style: const TextStyle(color: Colors.white),
+                        style: TextStyle(
+                          color: themeProvider.isDarkMode
+                              ? Colors.white
+                              : Colors.black,
+                        ),
                       ),
                       trailing: IconButton(
                         icon: const Icon(
@@ -312,8 +344,8 @@ class _TabOnlineState extends State<TabOnline>
 
   Widget _buildSkeletonLoading() {
     return Shimmer.fromColors(
-      baseColor: const Color(0xFF2A2A3A),
-      highlightColor: const Color(0xFF3F3F4F),
+      baseColor: Theme.of(context).cardColor,
+      highlightColor: Theme.of(context).dividerColor,
       child: ListView.builder(
         itemCount: 10,
         itemBuilder: (context, index) {
@@ -352,6 +384,7 @@ class _TabOnlineState extends State<TabOnline>
   }
 
   Widget _buildSearchResults() {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return ValueListenableBuilder<int>(
       valueListenable: OnlineMusicController.currentIndex,
       builder: (context, currentIndexValue, _) {
@@ -359,6 +392,27 @@ class _TabOnlineState extends State<TabOnline>
           valueListenable: OnlineMusicController.currentQueueType,
           builder: (context, queueType, _) {
             final results = OnlineMusicController.searchResults;
+
+            if (results.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.search,
+                      size: 80,
+                      color: accentColor.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Nhập tên bài hát để tìm kiếm",
+                      style: TextStyle(color: accentColor, fontSize: 18),
+                    ),
+                  ],
+                ),
+              );
+            }
+
             return ListView.builder(
               itemCount: results.length,
               itemBuilder: (context, index) {
@@ -383,7 +437,9 @@ class _TabOnlineState extends State<TabOnline>
                     delayBefore: const Duration(seconds: 2),
                     pauseBetween: const Duration(seconds: 2),
                     style: TextStyle(
-                      color: isPlaying ? Colors.tealAccent : Colors.white,
+                      color: isPlaying
+                          ? accentColor
+                          : Theme.of(context).textTheme.bodyLarge?.color,
                       fontWeight: isPlaying
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -395,7 +451,7 @@ class _TabOnlineState extends State<TabOnline>
                         child: Text(
                           video.author,
                           style: TextStyle(
-                            color: isPlaying ? Colors.tealAccent : Colors.grey,
+                            color: isPlaying ? accentColor : Colors.grey,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -404,7 +460,7 @@ class _TabOnlineState extends State<TabOnline>
                       Text(
                         " • ${_formatDuration(video.duration)}",
                         style: TextStyle(
-                          color: isPlaying ? Colors.tealAccent : Colors.grey,
+                          color: isPlaying ? accentColor : Colors.grey,
                         ),
                       ),
                     ],
@@ -413,9 +469,9 @@ class _TabOnlineState extends State<TabOnline>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.add_circle_outline,
-                          color: Colors.tealAccent,
+                          color: accentColor,
                         ),
                         onPressed: () =>
                             OnlineMusicController.addToOnlinePlaylist(
@@ -425,10 +481,7 @@ class _TabOnlineState extends State<TabOnline>
                             ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.download,
-                          color: Colors.tealAccent,
-                        ),
+                        icon: Icon(Icons.download, color: accentColor),
                         onPressed: () =>
                             OnlineMusicController.downloadSong(video, context),
                       ),

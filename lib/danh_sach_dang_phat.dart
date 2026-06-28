@@ -12,7 +12,7 @@ class DanhSachDangPhat extends StatelessWidget {
   static void show(BuildContext context, AudioPlayer audioPlayer) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: Theme.of(context).cardColor,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -30,6 +30,7 @@ class DanhSachDangPhat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return StreamBuilder<SequenceState?>(
       stream: audioPlayer.sequenceStateStream,
       builder: (context, snapshot) {
@@ -52,7 +53,7 @@ class DanhSachDangPhat extends StatelessWidget {
                   children: [
                     Icon(
                       isOnline ? Icons.language : Icons.queue_music,
-                      color: Colors.tealAccent,
+                      color: accentColor,
                       size: 28,
                     ),
                     const SizedBox(width: 10),
@@ -63,8 +64,8 @@ class DanhSachDangPhat extends StatelessWidget {
                                 ? "Danh sách Online"
                                 : "Kết quả tìm kiếm")
                           : 'Danh sách phát',
-                      style: const TextStyle(
-                        color: Colors.tealAccent,
+                      style: TextStyle(
+                        color: accentColor,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
@@ -72,7 +73,7 @@ class DanhSachDangPhat extends StatelessWidget {
                   ],
                 ),
               ),
-              const Divider(color: Colors.tealAccent, height: 1),
+              Divider(color: accentColor, height: 1),
               Expanded(
                 child: sequence.isEmpty
                     ? const Center(
@@ -127,18 +128,17 @@ class DanhSachDangPhat extends StatelessWidget {
                                       itemMedia.artUri?.toString() ?? "",
                                       fit: BoxFit.cover,
                                       errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              const Icon(
-                                                Icons.music_note,
-                                                color: Colors.tealAccent,
-                                              ),
+                                          (context, error, stackTrace) => Icon(
+                                            Icons.music_note,
+                                            color: accentColor,
+                                          ),
                                     )
                                   : QueryArtworkWidget(
                                       id: int.tryParse(itemMedia.id) ?? 0,
                                       type: ArtworkType.AUDIO,
-                                      nullArtworkWidget: const Icon(
+                                      nullArtworkWidget: Icon(
                                         Icons.music_note,
-                                        color: Colors.tealAccent,
+                                        color: accentColor,
                                       ),
                                     ),
                             ),
@@ -148,8 +148,10 @@ class DanhSachDangPhat extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: isPlaying
-                                    ? Colors.tealAccent
-                                    : Colors.white,
+                                    ? accentColor
+                                    : Theme.of(
+                                        context,
+                                      ).textTheme.bodyLarge?.color,
                                 fontWeight: isPlaying
                                     ? FontWeight.bold
                                     : FontWeight.normal,
@@ -161,18 +163,19 @@ class DanhSachDangPhat extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: isPlaying
-                                    ? Colors.tealAccent
-                                    : Colors.grey[400],
+                                    ? accentColor
+                                    : Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.color
+                                          ?.withValues(alpha: 0.7),
                               ),
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 if (isPlaying)
-                                  const Icon(
-                                    Icons.equalizer,
-                                    color: Colors.tealAccent,
-                                  ),
+                                  Icon(Icons.equalizer, color: accentColor),
                                 IconButton(
                                   icon: const Icon(
                                     Icons.remove_circle_outline,

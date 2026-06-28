@@ -11,6 +11,7 @@ class MiniPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MusicController musicController = MusicController();
+    final accentColor = Theme.of(context).colorScheme.primary;
 
     return ValueListenableBuilder<MediaItem?>(
       valueListenable: musicController.currentItem,
@@ -28,7 +29,7 @@ class MiniPlayer extends StatelessWidget {
             height: 75,
             margin: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
-              color: const Color(0xFF2A2A3A),
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(35),
             ),
             child: Column(
@@ -47,7 +48,7 @@ class MiniPlayer extends StatelessWidget {
                             color: const Color(0xFF4B5563),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: _buildArtwork(item),
+                          child: _buildArtwork(item, accentColor),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -64,15 +65,15 @@ class MiniPlayer extends StatelessWidget {
                               ),
                               delayBefore: const Duration(seconds: 2),
                               pauseBetween: const Duration(seconds: 2),
-                              style: const TextStyle(
-                                color: Colors.tealAccent,
+                              style: TextStyle(
+                                color: accentColor,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
                               item.artist ?? "Không biết",
-                              style: const TextStyle(
-                                color: Colors.tealAccent,
+                              style: TextStyle(
+                                color: accentColor,
                                 fontSize: 12,
                               ),
                               maxLines: 1,
@@ -82,10 +83,7 @@ class MiniPlayer extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.skip_previous,
-                          color: Colors.tealAccent,
-                        ),
+                        icon: Icon(Icons.skip_previous, color: accentColor),
                         onPressed: () {
                           if (musicController.audioPlayer.hasPrevious) {
                             musicController.audioPlayer.seekToPrevious();
@@ -98,7 +96,7 @@ class MiniPlayer extends StatelessWidget {
                           return IconButton(
                             icon: Icon(
                               playing ? Icons.pause : Icons.play_arrow,
-                              color: Colors.tealAccent,
+                              color: accentColor,
                               size: 35,
                             ),
                             onPressed: () {
@@ -110,10 +108,7 @@ class MiniPlayer extends StatelessWidget {
                         },
                       ),
                       IconButton(
-                        icon: const Icon(
-                          Icons.skip_next,
-                          color: Colors.tealAccent,
-                        ),
+                        icon: Icon(Icons.skip_next, color: accentColor),
                         onPressed: () {
                           if (musicController.audioPlayer.hasNext) {
                             musicController.audioPlayer.seekToNext();
@@ -124,7 +119,7 @@ class MiniPlayer extends StatelessWidget {
                     ],
                   ),
                 ),
-                _buildProgressBar(musicController),
+                _buildProgressBar(musicController, accentColor),
               ],
             ),
           ),
@@ -133,28 +128,25 @@ class MiniPlayer extends StatelessWidget {
     );
   }
 
-  Widget _buildArtwork(MediaItem item) {
+  Widget _buildArtwork(MediaItem item, Color accentColor) {
     if (item.extras?['is_online'] == true) {
       return Image.network(
         item.artUri?.toString() ?? "",
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.music_note, color: Colors.tealAccent),
+            Icon(Icons.music_note, color: accentColor),
       );
     } else {
       return QueryArtworkWidget(
         id: int.tryParse(item.id) ?? 0,
         type: ArtworkType.AUDIO,
         artworkFit: BoxFit.cover,
-        nullArtworkWidget: const Icon(
-          Icons.music_note,
-          color: Colors.tealAccent,
-        ),
+        nullArtworkWidget: Icon(Icons.music_note, color: accentColor),
       );
     }
   }
 
-  Widget _buildProgressBar(MusicController musicController) {
+  Widget _buildProgressBar(MusicController musicController, Color accentColor) {
     return StreamBuilder<Duration>(
       stream: musicController.audioPlayer.positionStream,
       builder: (context, snapshot) {
@@ -178,9 +170,7 @@ class MiniPlayer extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               backgroundColor: Colors.transparent,
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Colors.tealAccent,
-              ),
+              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
               minHeight: 3,
             ),
           ),

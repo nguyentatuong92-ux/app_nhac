@@ -113,31 +113,30 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      backgroundColor: const Color(0x901E293B),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           widget.playlist.playlist,
-          style: const TextStyle(color: Colors.tealAccent),
+          style: TextStyle(color: accentColor),
         ),
-        backgroundColor: const Color(0xFF1E293B),
-        iconTheme: const IconThemeData(color: Colors.tealAccent),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        iconTheme: IconThemeData(color: accentColor),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.tealAccent, size: 28),
+            icon: Icon(Icons.add, color: accentColor, size: 28),
             onPressed: _openAddSongMenu,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.tealAccent),
-            )
+          ? Center(child: CircularProgressIndicator(color: accentColor))
           : _songs.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Chưa có bài hát nào trong danh sách này.',
-                style: TextStyle(color: Colors.tealAccent),
+                style: TextStyle(color: accentColor),
               ),
             )
           : ValueListenableBuilder<MediaItem?>(
@@ -165,9 +164,7 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                         isPlayingThisSong
                             ? Icons.play_circle_outline_outlined
                             : Icons.music_note,
-                        color: isPlayingThisSong
-                            ? Colors.tealAccent
-                            : Colors.white,
+                        color: isPlayingThisSong ? accentColor : Colors.white,
                       ),
                       title: TextScroll(
                         song.title,
@@ -179,8 +176,8 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                         pauseBetween: const Duration(seconds: 2),
                         style: TextStyle(
                           color: isPlayingThisSong
-                              ? Colors.tealAccent
-                              : Colors.white,
+                              ? accentColor
+                              : Theme.of(context).textTheme.bodyLarge?.color,
                           fontWeight: isPlayingThisSong
                               ? FontWeight.bold
                               : FontWeight.normal,
@@ -193,8 +190,12 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                               song.artist ?? "Không biết",
                               style: TextStyle(
                                 color: isPlayingThisSong
-                                    ? Colors.tealAccent
-                                    : Colors.white,
+                                    ? accentColor
+                                    : Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.color
+                                          ?.withValues(alpha: 0.7),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -204,8 +205,12 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                             " • ${_formatDuration(song.duration)}",
                             style: TextStyle(
                               color: isPlayingThisSong
-                                  ? Colors.tealAccent
-                                  : Colors.white,
+                                  ? accentColor
+                                  : Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.color
+                                        ?.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
