@@ -673,14 +673,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     children:
                         [
                           Colors.tealAccent,
-                          Colors.blueAccent,
-                          Colors.pinkAccent,
+                          themeProvider.isDarkMode
+                              ? Colors.blueAccent
+                              : Colors.brown,
+                          //Colors.blueAccent,
+                          Colors.lightBlue,
                           Colors.orangeAccent,
                           Colors.purpleAccent,
                           themeProvider.isDarkMode
                               ? Colors.white70
                               : Colors.black,
-                          Colors.lightGreenAccent,
+                          themeProvider.isDarkMode
+                              ? Colors.lightGreenAccent
+                              : Colors.red,
+                          //Colors.lightGreenAccent,
                         ].map((color) {
                           final isSelected =
                               themeProvider.accentColor.toARGB32() ==

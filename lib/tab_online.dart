@@ -385,6 +385,7 @@ class _TabOnlineState extends State<TabOnline>
 
   Widget _buildSearchResults() {
     final accentColor = Theme.of(context).colorScheme.primary;
+    final themeProvider = Provider.of<ThemeProvider>(context);
     return ValueListenableBuilder<int>(
       valueListenable: OnlineMusicController.currentIndex,
       builder: (context, currentIndexValue, _) {
@@ -414,6 +415,7 @@ class _TabOnlineState extends State<TabOnline>
             }
 
             return ListView.builder(
+              padding: const EdgeInsets.only(bottom: 100),
               itemCount: results.length,
               itemBuilder: (context, index) {
                 final video = results[index];
@@ -421,6 +423,7 @@ class _TabOnlineState extends State<TabOnline>
                     index == currentIndexValue && queueType == "search";
 
                 return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   leading: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
@@ -445,45 +448,47 @@ class _TabOnlineState extends State<TabOnline>
                           : FontWeight.normal,
                     ),
                   ),
-                  subtitle: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          video.author,
-                          style: TextStyle(
-                            color: isPlaying ? accentColor : Colors.grey,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Text(
-                        " • ${_formatDuration(video.duration)}",
-                        style: TextStyle(
-                          color: isPlaying ? accentColor : Colors.grey,
-                        ),
-                      ),
-                    ],
+                  subtitle: Text(
+                    "${video.author} • ${_formatDuration(video.duration)}",
+                    style: TextStyle(
+                      color: isPlaying ? accentColor : Colors.grey,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.add_circle_outline,
-                          color: accentColor,
+                  trailing: PopupMenuButton<int>(
+                    icon: Icon(Icons.more_vert, color: accentColor),
+                    color: themeProvider.isDarkMode
+                        ? const Color(0xFF2A2A3A)
+                        : Colors.white,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                    ),
+                    onSelected: (value) {
+                      if (value == 1) {
+                        OnlineMusicController.addToOnlinePlaylist(
+                          video,
+                          context,
+                          widget.audioPlayer,
+                        );
+                      } else if (value == 2) {
+                        OnlineMusicController.downloadSong(video, context);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 1,
+                        child: Text(
+                          'Thêm vào danh sách',
+                          style: TextStyle(color: accentColor),
                         ),
-                        onPressed: () =>
-                            OnlineMusicController.addToOnlinePlaylist(
-                              video,
-                              context,
-                              widget.audioPlayer,
-                            ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.download, color: accentColor),
-                        onPressed: () =>
-                            OnlineMusicController.downloadSong(video, context),
+                      PopupMenuItem(
+                        value: 2,
+                        child: Text(
+                          'Tải xuống',
+                          style: TextStyle(color: accentColor),
+                        ),
                       ),
                     ],
                   ),

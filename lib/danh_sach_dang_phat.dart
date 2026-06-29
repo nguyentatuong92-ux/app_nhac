@@ -83,7 +83,7 @@ class DanhSachDangPhat extends StatelessWidget {
                         ),
                       )
                     : ReorderableListView.builder(
-                        padding: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.only(bottom: 80),
                         itemCount: sequence.length,
                         onReorder: (oldIndex, newIndex) async {
                           if (oldIndex < newIndex) newIndex -= 1;
