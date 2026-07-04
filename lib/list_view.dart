@@ -7,8 +7,11 @@ import 'cap_nhat_service.dart';
 import 'mini_player.dart';
 import 'music_controller.dart';
 import 'tab_bai_hat.dart';
+import 'tab_danh_sach_tai.dart';
 import 'tab_danh_sach_phat.dart';
 import 'tab_online.dart';
+import 'font_setting_dialog.dart';
+import 'danh_sach_phat.dart';
 
 class ListViewScreen extends StatefulWidget {
   const ListViewScreen({super.key});
@@ -29,6 +32,7 @@ class _ListViewScreenState extends State<ListViewScreen>
   List<SongModel> _allSongs = [];
   bool _isLoadingSongs = true;
   final Set<int> _deletedSongIds = {};
+  final GlobalKey<TabDanhSachPhatState> _playlistTabKey = GlobalKey();
 
   Future<void> _kiemTraBanCapNhatNgam() async {
     bool coCapNhat = await CapNhatService.kiemTraCoBanCapNhatNgam();
@@ -56,7 +60,7 @@ class _ListViewScreenState extends State<ListViewScreen>
   Future<void> _loadSongs() async {
     try {
       final songs = await _audioQuery.querySongs(
-        sortType: SongSortType.TITLE,
+        sortType: SongSortType.DISPLAY_NAME,
         ignoreCase: true,
         orderType: OrderType.ASC_OR_SMALLER,
         uriType: UriType.EXTERNAL,
@@ -80,7 +84,7 @@ class _ListViewScreenState extends State<ListViewScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -118,8 +122,10 @@ class _ListViewScreenState extends State<ListViewScreen>
     final accentColor = Theme.of(context).colorScheme.primary;
     String appBarTitle = 'BÀI HÁT';
     if (_tabController.index == 1) {
-      appBarTitle = 'DANH SÁCH';
+      appBarTitle = 'ĐÃ TẢI';
     } else if (_tabController.index == 2) {
+      appBarTitle = 'DANH SÁCH';
+    } else if (_tabController.index == 3) {
       appBarTitle = 'NHẠC ONLINE';
     }
 
@@ -157,10 +163,28 @@ class _ListViewScreenState extends State<ListViewScreen>
         iconTheme: IconThemeData(color: accentColor),
         actions: [
           IconButton(
+            icon: Icon(Icons.font_download, color: accentColor),
+            tooltip: 'Thay đổi kiểu chữ',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const FontSettingDialog(),
+              );
+            },
+          ),
+          IconButton(
             icon: Icon(Icons.refresh, color: accentColor),
             tooltip: 'Làm mới danh sách',
             onPressed: () {
+              // 1. Xóa bộ nhớ đệm playlist
+              globalPlaylistCache.clear();
+
+              // 2. Tải lại danh sách bài hát
               _loadSongs();
+
+              // 3. Thông báo cho Tab Playlist cập nhật lại UI
+              _playlistTabKey.currentState?.refresh();
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   backgroundColor: const Color(0xFF64B5F6),
@@ -169,7 +193,7 @@ class _ListViewScreenState extends State<ListViewScreen>
                     borderRadius: BorderRadius.all(Radius.circular(15.0)),
                   ),
                   content: const Text(
-                    'Đang làm mới danh sách...',
+                    'Đã làm mới toàn bộ danh sách!',
                     style: TextStyle(color: Colors.black, fontSize: 18),
                   ),
                 ),
@@ -187,6 +211,10 @@ class _ListViewScreenState extends State<ListViewScreen>
             Tab(
               icon: Icon(Icons.music_note),
               child: FittedBox(fit: BoxFit.scaleDown, child: Text('Bài hát')),
+            ),
+            Tab(
+              icon: Icon(Icons.download_for_offline),
+              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Đã tải')),
             ),
             Tab(
               icon: Icon(Icons.queue_music),
@@ -214,8 +242,21 @@ class _ListViewScreenState extends State<ListViewScreen>
                       _deletedSongIds.add(songId);
                     });
                   },
+                  onSongRenamed: _loadSongs,
                 ),
-                TabDanhSachPhat(audioQuery: _audioQuery),
+                TabDanhSachTai(
+                  allSongs: _allSongs,
+                  isLoadingSongs: _isLoadingSongs,
+                  audioQuery: _audioQuery,
+                  deletedSongIds: _deletedSongIds,
+                  onSongDeleted: (songId) {
+                    setState(() {
+                      _deletedSongIds.add(songId);
+                    });
+                  },
+                  onSongRenamed: _loadSongs,
+                ),
+                TabDanhSachPhat(key: _playlistTabKey, audioQuery: _audioQuery),
                 TabOnline(audioPlayer: _musicController.audioPlayer),
               ],
             ),

@@ -11,11 +11,17 @@ class TabDanhSachPhat extends StatefulWidget {
   const TabDanhSachPhat({super.key, required this.audioQuery});
 
   @override
-  State<TabDanhSachPhat> createState() => _TabDanhSachPhatState();
+  State<TabDanhSachPhat> createState() => TabDanhSachPhatState();
 }
 
-class _TabDanhSachPhatState extends State<TabDanhSachPhat> {
+class TabDanhSachPhatState extends State<TabDanhSachPhat> {
   final MusicController _musicController = MusicController();
+
+  void refresh() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   void _showCreatePlaylistDialog() {
     final accentColor = Theme.of(context).colorScheme.primary;

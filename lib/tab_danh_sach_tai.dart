@@ -9,7 +9,7 @@ import 'theme_provider.dart';
 import 'music_controller.dart';
 import 'danh_sach_phat.dart';
 
-class TabBaiHat extends StatefulWidget {
+class TabDanhSachTai extends StatefulWidget {
   final List<SongModel> allSongs;
   final bool isLoadingSongs;
   final OnAudioQuery audioQuery;
@@ -17,7 +17,7 @@ class TabBaiHat extends StatefulWidget {
   final Function(int) onSongDeleted;
   final VoidCallback onSongRenamed;
 
-  const TabBaiHat({
+  const TabDanhSachTai({
     super.key,
     required this.allSongs,
     required this.isLoadingSongs,
@@ -28,10 +28,10 @@ class TabBaiHat extends StatefulWidget {
   });
 
   @override
-  State<TabBaiHat> createState() => _TabBaiHatState();
+  State<TabDanhSachTai> createState() => _TabDanhSachTaiState();
 }
 
-class _TabBaiHatState extends State<TabBaiHat> {
+class _TabDanhSachTaiState extends State<TabDanhSachTai> {
   final ScrollController _scrollController = ScrollController();
   final List<String> _alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split('');
   String _currentLetter = "A";
@@ -58,7 +58,11 @@ class _TabBaiHatState extends State<TabBaiHat> {
     if (!_scrollController.hasClients) return;
 
     List<SongModel> songs = widget.allSongs
-        .where((s) => !widget.deletedSongIds.contains(s.id))
+        .where(
+          (s) =>
+              !widget.deletedSongIds.contains(s.id) &&
+              s.data.contains('/Download/'),
+        )
         .toList();
     if (songs.isEmpty) return;
 
@@ -429,6 +433,10 @@ class _TabBaiHatState extends State<TabBaiHat> {
       final isDeleted = widget.deletedSongIds.contains(s.id);
       if (isDeleted) return false;
 
+      // Lọc bài hát đã tải (nằm trong thư mục Download)
+      final isDownloaded = s.data.contains('/Download/');
+      if (!isDownloaded) return false;
+
       if (_searchQuery.isEmpty) return true;
 
       final titleMatches = s.displayNameWOExt.toLowerCase().contains(
@@ -455,7 +463,7 @@ class _TabBaiHatState extends State<TabBaiHat> {
                         autofocus: true,
                         style: TextStyle(color: accentColor, fontSize: 18),
                         decoration: InputDecoration(
-                          hintText: "Tìm kiếm bài hát ...",
+                          hintText: "Tìm kiếm bài hát đã tải ...",
                           hintStyle: TextStyle(
                             color: accentColor.withValues(alpha: 0.5),
                           ),
@@ -498,15 +506,19 @@ class _TabBaiHatState extends State<TabBaiHat> {
                       )
                     : Row(
                         children: [
-                          Icon(Icons.sort, color: accentColor, size: 18),
+                          Icon(
+                            Icons.download_for_offline,
+                            color: accentColor,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            "Tên Bài Hát",
+                            "Danh sách tải",
                             style: TextStyle(color: accentColor, fontSize: 16),
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            "(${songs.length} bài hát)",
+                            "(${songs.length} bài)",
                             style: TextStyle(
                               color: accentColor.withValues(alpha: 0.7),
                               fontSize: 16,
@@ -536,7 +548,7 @@ class _TabBaiHatState extends State<TabBaiHat> {
                       return Center(
                         child: Text(
                           _searchQuery.isEmpty
-                              ? 'Không có bài hát nào.'
+                              ? 'Chưa có bài hát nào được tải.'
                               : 'Không tìm thấy kết quả nào.',
                           style: TextStyle(color: accentColor, fontSize: 18),
                         ),
@@ -551,7 +563,7 @@ class _TabBaiHatState extends State<TabBaiHat> {
                             return ListView.separated(
                               padding: const EdgeInsets.only(bottom: 100),
                               key: const PageStorageKey<String>(
-                                'danh_sach_chinh',
+                                'danh_sach_tai',
                               ),
                               controller: _scrollController,
                               itemCount: songs.length,

@@ -1,18 +1,37 @@
-# Fix Bottom Overlap in Playback List
+# Move Search Close Button Inside the Rounded Bar
 
-The bottom sheet showing the current playlist ("Danh sách đang phát") has its last items partially obscured by the system navigation bar or potential mini-player space (though in a bottom sheet, it's usually the system bar). Adding significant padding at the bottom of the list will allow the user to scroll the last item fully into view.
+Improve the search bar layout by moving the 'X' (close/clear) button inside the rounded container, creating a more compact and integrated look.
 
 ## Proposed Changes
 
-### UI Components
+### UI Layout
 
-#### [danh_sach_dang_phat.dart](file:///C:/LT_mobile/app_nhac/lib/danh_sach_dang_phat.dart)
+#### [tab_bai_hat.dart](file:///C:/LT_mobile/app_nhac/lib/tab_bai_hat.dart)
 
-- Increase the `bottom` padding in `ReorderableListView.builder` from `20` to `80`. This provides enough space so the last item is not covered by the system navigation buttons or the rounded corners of the device.
+- **Restructure Search Header**:
+    - Remove the external `IconButton` that was used for closing the search.
+    - Move the close logic into the `suffixIcon` property of the `TextField`'s `InputDecoration`.
+    - Use an `IconButton` as the `suffixIcon` to ensure it is clickable and properly aligned within the rounded border.
+    - Ensure the search bar takes up the full width available when active.
 
-```diff
-- padding: const EdgeInsets.only(bottom: 20),
-+ padding: const EdgeInsets.only(bottom: 80),
+```dart
+// New TextField structure
+TextField(
+  ...
+  decoration: InputDecoration(
+    ...
+    suffixIcon: IconButton(
+      icon: Icon(Icons.close, color: accentColor, size: 20),
+      onPressed: () {
+        setState(() {
+          _isSearching = false;
+          _searchQuery = "";
+          _searchController.clear();
+        });
+      },
+    ),
+  ),
+)
 ```
 
 ---
@@ -20,6 +39,6 @@ The bottom sheet showing the current playlist ("Danh sách đang phát") has its
 ## Verification Plan
 
 ### Manual Verification
-1.  **Open Playback List**: While a song is playing (or in the queue), open the "Danh sách đang phát" bottom sheet (the queue icon).
-2.  **Scroll to Bottom**: Scroll all the way to the end of the list.
-3.  **Check Visibility**: Verify that the last item in the list is fully visible and not covered by the Android navigation bar (the three buttons at the bottom: Back, Home, Recents).
+1. **Visual Check**: Activate search mode and verify the 'X' button is clearly inside the colored, rounded background.
+2. **Functional Check**: Click the 'X' button inside the bar and verify it successfully exits search mode and clears the query.
+3. **Alignment**: Ensure the 'X' button doesn't overlap the text or look unbalanced within the rounded shape.

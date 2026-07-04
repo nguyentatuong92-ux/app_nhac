@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'is_dark_mode';
   static const String _accentKey = 'accent_color';
+  static const String _fontKey = 'font_family';
 
   bool _isDarkMode = true;
   Color _accentColor = Colors.tealAccent;
+  String _fontFamily = 'Roboto';
 
   bool get isDarkMode => _isDarkMode;
   Color get accentColor => _accentColor;
+  String get fontFamily => _fontFamily;
 
   ThemeProvider() {
     _loadFromPrefs();
@@ -20,6 +24,7 @@ class ThemeProvider extends ChangeNotifier {
     _isDarkMode = prefs.getBool(_themeKey) ?? true;
     final colorValue = prefs.getInt(_accentKey) ?? Colors.tealAccent.toARGB32();
     _accentColor = Color(colorValue);
+    _fontFamily = prefs.getString(_fontKey) ?? 'Roboto';
     notifyListeners();
   }
 
@@ -47,6 +52,13 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setFontFamily(String font) async {
+    _fontFamily = font;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_fontKey, font);
+    notifyListeners();
+  }
+
   ThemeData get themeData {
     final baseTheme = _isDarkMode ? ThemeData.dark() : ThemeData.light();
     final primaryColor = _isDarkMode ? const Color(0xFF1E293B) : Colors.white;
@@ -54,10 +66,18 @@ class ThemeProvider extends ChangeNotifier {
         ? const Color(0xFF1E293B)
         : const Color(0xFFF8FAFC);
 
+    TextTheme textTheme;
+    try {
+      textTheme = GoogleFonts.getTextTheme(_fontFamily, baseTheme.textTheme);
+    } catch (e) {
+      textTheme = baseTheme.textTheme;
+    }
+
     return baseTheme.copyWith(
       primaryColor: primaryColor,
       scaffoldBackgroundColor: scaffoldBg,
       cardColor: _isDarkMode ? const Color(0xFF0F172A) : Colors.white54,
+      textTheme: textTheme,
       colorScheme: ColorScheme.fromSeed(
         seedColor: _accentColor,
         brightness: _isDarkMode ? Brightness.dark : Brightness.light,
@@ -67,6 +87,11 @@ class ThemeProvider extends ChangeNotifier {
         backgroundColor: _isDarkMode ? const Color(0xFF1E293B) : Colors.white,
         foregroundColor: _accentColor,
         elevation: 0,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: _accentColor,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
       ),
       tabBarTheme: TabBarThemeData(
         labelColor: _accentColor,
@@ -74,6 +99,8 @@ class ThemeProvider extends ChangeNotifier {
             ? _accentColor.withValues(alpha: 0.6)
             : Colors.grey,
         indicatorColor: _accentColor,
+        labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+        unselectedLabelStyle: textTheme.labelLarge,
       ),
     );
   }

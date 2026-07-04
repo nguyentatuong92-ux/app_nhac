@@ -1,16 +1,12 @@
 # Task Management
 
-- [x] Research existing Online Music search implementation
-- [x] Research existing "More" menu style in local music tab
-- [x] Create initial implementation plan (PopupMenuButton)
-- [x] Implement `PopupMenuButton` in `tab_online.dart`
-- [x] Verify initial functionality
-- [x] Research and Plan UI smoothness improvements
-- [x] Implement UI layout adjustments in `tab_online.dart`
-- [x] Verify "smoothness" and alignment
-- [x] Revert problematic compact menu changes
-- [x] Fix bottom overlap in playback list
-	- [x] Research `danh_sach_dang_phat.dart`
-	- [x] Create implementation plan for padding
-	- [x] Apply padding fix
-- [x] Verify fix in playback list
+- [x] Research and implement Font Customization (Google Fonts)
+- [x] Implement Song Renaming and UI sync (Filenames + Delay)
+- [x] Audit and Enhance List Refresh Functionality
+- [x] Implement Local Song Search
+- [x] Display Total Song Count in Header
+- [x] Style Local Search Bar (Rounded & Filled)
+	- [x] Research `tab_online.dart` search bar style
+	- [x] Create implementation plan for styling
+	- [x] Apply styling changes to `tab_bai_hat.dart`
+- [x] Verify search bar appearance
