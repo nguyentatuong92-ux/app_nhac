@@ -85,6 +85,7 @@ class OnlineMusicController {
     bool showLoading = true,
     List<Video>? customQueue,
     String queueType = "search",
+    String source = "online",
   }) async {
     List<Video> queue =
         customQueue ??
@@ -99,7 +100,9 @@ class OnlineMusicController {
 
     _isProcessing = true;
     bool dialogOpened = false;
-    debugPrint("Bắt đầu playSong: index $index, type $queueType");
+    debugPrint(
+      "Bắt đầu playSong: index $index, type $queueType, source $source",
+    );
 
     if (showLoading && context.mounted) {
       dialogOpened = true;
@@ -135,7 +138,7 @@ class OnlineMusicController {
           artist: video.author,
           duration: video.duration,
           artUri: Uri.parse(video.thumbnails.highResUrl),
-          extras: {'is_online': true, 'index': index},
+          extras: {'is_online': true, 'index': index, 'source': source},
         ),
       );
 
@@ -164,7 +167,7 @@ class OnlineMusicController {
                   artist: v.author,
                   duration: v.duration,
                   artUri: Uri.parse(v.thumbnails.highResUrl),
-                  extras: {'is_online': true, 'index': i},
+                  extras: {'is_online': true, 'index': i, 'source': source},
                 ),
               ),
             );
@@ -463,7 +466,7 @@ class OnlineMusicController {
             artist: video.author,
             duration: video.duration,
             artUri: Uri.parse(video.thumbnails.highResUrl),
-            extras: {'is_online': true, 'index': index},
+            extras: {'is_online': true, 'index': index, 'source': 'online'},
           ),
         );
         audioPlayer.addAudioSource(source);
@@ -572,7 +575,7 @@ class OnlineMusicController {
         artist: video.author,
         duration: video.duration,
         artUri: Uri.parse(video.thumbnails.highResUrl),
-        extras: {'is_online': true, 'index': index},
+        extras: {'is_online': true, 'index': index, 'source': 'online'},
       ),
     );
 

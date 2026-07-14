@@ -3,6 +3,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'online_music_controller.dart';
+import 'danh_sach_phat.dart';
 
 class DanhSachDangPhat extends StatelessWidget {
   final AudioPlayer audioPlayer;
@@ -102,6 +103,30 @@ class DanhSachDangPhat extends StatelessWidget {
                               );
                               OnlineMusicController.currentIndex.value =
                                   audioPlayer.currentIndex ?? -1;
+                            } else {
+                              // Đồng bộ ngược lại Playlist nếu đang phát từ Playlist
+                              final sourceName =
+                                  currentMediaItem?.extras?['source'];
+
+                              if (sourceName != null &&
+                                  sourceName != 'offline' &&
+                                  sourceName != 'download') {
+                                // Tìm playlist theo tên
+                                final query = OnAudioQuery();
+                                final playlists = await query.queryPlaylists();
+                                final playlist = playlists.firstWhere(
+                                  (p) => p.playlist == sourceName,
+                                );
+
+                                if (globalPlaylistCache.containsKey(
+                                  playlist.id,
+                                )) {
+                                  final list =
+                                      globalPlaylistCache[playlist.id]!;
+                                  final song = list.removeAt(oldIndex);
+                                  list.insert(newIndex, song);
+                                }
+                              }
                             }
                           } catch (e) {
                             debugPrint("Lỗi di chuyển: $e");

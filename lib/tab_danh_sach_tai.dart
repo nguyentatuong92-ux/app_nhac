@@ -727,6 +727,7 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
                                   onTap: () => _musicController.playOfflineList(
                                     songs,
                                     index,
+                                    source: 'download',
                                   ),
                                 );
                               },
@@ -736,9 +737,12 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
+                            padding: const EdgeInsets.only(
+                              right: 8.0,
+                              bottom: 20.0,
+                            ),
                             child: FractionallySizedBox(
-                              heightFactor: 0.85,
+                              heightFactor: 0.75,
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   return GestureDetector(
@@ -787,6 +791,7 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
                                                 child: Text(
                                                   letter,
                                                   style: TextStyle(
+                                                    fontFamily: 'Roboto',
                                                     color: isSelected
                                                         ? Colors.white
                                                         : accentColor

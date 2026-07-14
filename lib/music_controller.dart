@@ -30,7 +30,11 @@ class MusicController {
     });
   }
 
-  Future<void> playOfflineList(List<SongModel> songs, int initialIndex) async {
+  Future<void> playOfflineList(
+    List<SongModel> songs,
+    int initialIndex, {
+    String source = 'offline',
+  }) async {
     final sources = <AudioSource>[];
     for (var s in songs) {
       String uri = s.data.isNotEmpty
@@ -51,7 +55,7 @@ class MusicController {
                     'content://media/external/audio/albumart/${s.albumId}',
                   )
                 : null,
-            extras: {'is_online': false},
+            extras: {'is_online': false, 'source': source},
           ),
         ),
       );

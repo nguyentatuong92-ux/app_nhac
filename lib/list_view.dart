@@ -207,6 +207,9 @@ class _ListViewScreenState extends State<ListViewScreen>
           unselectedLabelColor: accentColor,
           indicatorColor: accentColor,
           labelPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+          onTap: (index) {
+            _tabController.animateTo(index);
+          },
           tabs: const [
             Tab(
               icon: Icon(Icons.music_note),

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:text_scroll/text_scroll.dart';
-import 'home_screen.dart';
 import 'chon_nhieu_bai_hat.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'music_controller.dart';
@@ -145,13 +143,28 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                 return ReorderableListView.builder(
                   padding: const EdgeInsets.only(bottom: 100),
                   itemCount: _songs.length,
-                  onReorder: (int oldIndex, int newIndex) {
+                  onReorder: (int oldIndex, int newIndex) async {
                     setState(() {
                       if (oldIndex < newIndex) newIndex -= 1;
                       final song = _songs.removeAt(oldIndex);
                       _songs.insert(newIndex, song);
                       globalPlaylistCache[widget.playlist.id] = _songs;
                     });
+
+                    // Đồng bộ với hàng đợi đang phát
+                    final currentItem = _musicController.currentItem.value;
+                    final sourceName = currentItem?.extras?['source'];
+
+                    if (sourceName == widget.playlist.playlist) {
+                      try {
+                        await _musicController.audioPlayer.moveAudioSource(
+                          oldIndex,
+                          newIndex,
+                        );
+                      } catch (e) {
+                        debugPrint("Lỗi đồng bộ di chuyển: $e");
+                      }
+                    }
                   },
                   itemBuilder: (context, index) {
                     final song = _songs[index];
@@ -225,6 +238,24 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                             widget.playlist.id,
                             song.id,
                           );
+
+                          // Đồng bộ với hàng đợi đang phát
+                          final currentItem =
+                              _musicController.currentItem.value;
+                          final sourceName = currentItem?.extras?['source'];
+
+                          if (sourceName == widget.playlist.playlist) {
+                            try {
+                              if (_musicController.audioPlayer.sequence.length >
+                                  index) {
+                                await _musicController.audioPlayer
+                                    .removeAudioSourceAt(index);
+                              }
+                            } catch (e) {
+                              debugPrint("Lỗi đồng bộ xóa: $e");
+                            }
+                          }
+
                           setState(() => _songs.removeAt(index));
                           globalPlaylistCache[widget.playlist.id] = _songs;
                           if (context.mounted) {
@@ -249,8 +280,11 @@ class _PlaylistDetailsScreenState extends State<PlaylistDetailsScreen> {
                           }
                         },
                       ),
-                      onTap: () =>
-                          _musicController.playOfflineList(_songs, index),
+                      onTap: () => _musicController.playOfflineList(
+                        _songs,
+                        index,
+                        source: widget.playlist.playlist,
+                      ),
                     );
                   },
                 );

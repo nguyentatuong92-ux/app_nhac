@@ -193,9 +193,30 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         title: Row(
           children: [
-            Text(
-              'Tá Tưởng',
-              style: TextStyle(color: accentColor, fontWeight: FontWeight.bold),
+            ValueListenableBuilder<MediaItem?>(
+              valueListenable: _musicController.currentItem,
+              builder: (context, item, _) {
+                String title = "Tá Tưởng";
+                final source = item?.extras?['source'];
+                if (source == 'online') {
+                  title = "Nhạc Online";
+                } else if (source == 'online_playlist') {
+                  title = "DS Online";
+                } else if (source == 'download') {
+                  title = "DS tải về";
+                } else if (source == 'offline') {
+                  title = "Bài hát";
+                } else if (source != null) {
+                  title = source;
+                }
+                return Text(
+                  title,
+                  style: TextStyle(
+                    color: accentColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                );
+              },
             ),
             if (_isOffline)
               const Padding(

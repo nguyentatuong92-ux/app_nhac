@@ -8,6 +8,7 @@ class FontSettingDialog extends StatelessWidget {
 
   static const List<String> fontOptions = [
     'Roboto',
+    'Be Vietnam Pro',
     'Montserrat',
     'Lora',
     'Dancing Script',

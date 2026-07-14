@@ -9,7 +9,7 @@ class ThemeProvider extends ChangeNotifier {
 
   bool _isDarkMode = true;
   Color _accentColor = Colors.tealAccent;
-  String _fontFamily = 'Roboto';
+  String _fontFamily = 'Be Vietnam Pro';
 
   bool get isDarkMode => _isDarkMode;
   Color get accentColor => _accentColor;
@@ -24,7 +24,7 @@ class ThemeProvider extends ChangeNotifier {
     _isDarkMode = prefs.getBool(_themeKey) ?? true;
     final colorValue = prefs.getInt(_accentKey) ?? Colors.tealAccent.toARGB32();
     _accentColor = Color(colorValue);
-    _fontFamily = prefs.getString(_fontKey) ?? 'Roboto';
+    _fontFamily = prefs.getString(_fontKey) ?? 'Be Vietnam Pro';
     notifyListeners();
   }
 

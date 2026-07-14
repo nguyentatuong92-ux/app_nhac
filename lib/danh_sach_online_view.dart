@@ -152,6 +152,7 @@ class _OnlinePlaylistDetailsScreenState
                     context,
                     customQueue: OnlineMusicController.onlinePlaylist.value,
                     queueType: "playlist",
+                    source: "online_playlist",
                   );
 
                   if (context.mounted) {
