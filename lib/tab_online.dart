@@ -14,8 +14,9 @@ import 'home_screen.dart';
 
 class TabOnline extends StatefulWidget {
   final AudioPlayer audioPlayer;
+  final Future<void> Function()? onRefresh;
 
-  const TabOnline({super.key, required this.audioPlayer});
+  const TabOnline({super.key, required this.audioPlayer, this.onRefresh});
 
   @override
   State<TabOnline> createState() => _TabOnlineState();
@@ -24,6 +25,7 @@ class TabOnline extends StatefulWidget {
 class _TabOnlineState extends State<TabOnline>
     with AutomaticKeepAliveClientMixin {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final MusicController _musicController = MusicController();
   bool _isLoading = false;
   List<String> _searchHistory = [];
@@ -101,6 +103,7 @@ class _TabOnlineState extends State<TabOnline>
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     _focusNode.dispose();
     _connectivitySubscription?.cancel();
     super.dispose();
@@ -395,121 +398,153 @@ class _TabOnlineState extends State<TabOnline>
             final results = OnlineMusicController.searchResults;
 
             if (results.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+              return RefreshIndicator(
+                onRefresh: widget.onRefresh ?? () async {},
+                color: accentColor,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   children: [
-                    Icon(
-                      Icons.search,
-                      size: 80,
-                      color: accentColor.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Nhập tên bài hát để tìm kiếm",
-                      style: TextStyle(color: accentColor, fontSize: 18),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.5,
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search,
+                              size: 80,
+                              color: accentColor.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Nhập tên bài hát để tìm kiếm",
+                              style: TextStyle(
+                                color: accentColor,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
               );
             }
 
-            return ListView.builder(
-              padding: const EdgeInsets.only(bottom: 100),
-              itemCount: results.length,
-              itemBuilder: (context, index) {
-                final video = results[index];
-                final isPlaying =
-                    index == currentIndexValue && queueType == "search";
+            return RefreshIndicator(
+              onRefresh: widget.onRefresh ?? () async {},
+              color: accentColor,
+              child: RawScrollbar(
+                controller: _scrollController,
+                thumbVisibility: true,
+                thickness: 6.0,
+                radius: const Radius.circular(10),
+                thumbColor: accentColor.withValues(alpha: 0.6),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 100),
+                  itemCount: results.length,
+                  itemBuilder: (context, index) {
+                    final video = results[index];
+                    final isPlaying =
+                        index == currentIndexValue && queueType == "search";
 
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      video.thumbnails.mediumResUrl,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  title: TextScroll(
-                    video.title,
-                    mode: TextScrollMode.bouncing,
-                    velocity: const Velocity(pixelsPerSecond: Offset(30, 0)),
-                    delayBefore: const Duration(seconds: 2),
-                    pauseBetween: const Duration(seconds: 2),
-                    style: TextStyle(
-                      color: isPlaying
-                          ? accentColor
-                          : Theme.of(context).textTheme.bodyLarge?.color,
-                      fontWeight: isPlaying
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                  subtitle: Text(
-                    "${video.author} • ${_formatDuration(video.duration)}",
-                    style: TextStyle(
-                      color: isPlaying ? accentColor : Colors.grey,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: PopupMenuButton<int>(
-                    icon: Icon(Icons.more_vert, color: accentColor),
-                    color: themeProvider.isDarkMode
-                        ? const Color(0xFF2A2A3A)
-                        : Colors.white,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(15.0)),
-                    ),
-                    onSelected: (value) {
-                      if (value == 1) {
-                        OnlineMusicController.addToOnlinePlaylist(
-                          video,
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                      ),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          video.thumbnails.mediumResUrl,
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      title: TextScroll(
+                        video.title,
+                        mode: TextScrollMode.bouncing,
+                        velocity: const Velocity(
+                          pixelsPerSecond: Offset(30, 0),
+                        ),
+                        delayBefore: const Duration(seconds: 2),
+                        pauseBetween: const Duration(seconds: 2),
+                        style: TextStyle(
+                          color: isPlaying
+                              ? accentColor
+                              : Theme.of(context).textTheme.bodyLarge?.color,
+                          fontWeight: isPlaying
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      subtitle: Text(
+                        "${video.author} • ${_formatDuration(video.duration)}",
+                        style: TextStyle(
+                          color: isPlaying ? accentColor : Colors.grey,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: PopupMenuButton<int>(
+                        icon: Icon(Icons.more_vert, color: accentColor),
+                        color: themeProvider.isDarkMode
+                            ? const Color(0xFF2A2A3A)
+                            : Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15.0)),
+                        ),
+                        onSelected: (value) {
+                          if (value == 1) {
+                            OnlineMusicController.addToOnlinePlaylist(
+                              video,
+                              context,
+                              widget.audioPlayer,
+                            );
+                          } else if (value == 2) {
+                            OnlineMusicController.downloadSong(video, context);
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 1,
+                            child: Text(
+                              'Thêm vào danh sách',
+                              style: TextStyle(color: accentColor),
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 2,
+                            child: Text(
+                              'Tải xuống',
+                              style: TextStyle(color: accentColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                      onTap: () async {
+                        await _musicController.playOnlineSong(
+                          index,
+                          results,
+                          "search",
                           context,
-                          widget.audioPlayer,
                         );
-                      } else if (value == 2) {
-                        OnlineMusicController.downloadSong(video, context);
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 1,
-                        child: Text(
-                          'Thêm vào danh sách',
-                          style: TextStyle(color: accentColor),
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 2,
-                        child: Text(
-                          'Tải xuống',
-                          style: TextStyle(color: accentColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                  onTap: () async {
-                    await _musicController.playOnlineSong(
-                      index,
-                      results,
-                      "search",
-                      context,
+                        if (context.mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HomeScreen(),
+                            ),
+                          );
+                        }
+                      },
                     );
-                    if (context.mounted) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const HomeScreen(),
-                        ),
-                      );
-                    }
                   },
-                );
-              },
+                ),
+              ),
             );
           },
         );

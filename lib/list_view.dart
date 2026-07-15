@@ -117,6 +117,34 @@ class _ListViewScreenState extends State<ListViewScreen>
     }
   }
 
+  Future<void> _handleRefresh() async {
+    // 1. Xóa bộ nhớ đệm playlist
+    globalPlaylistCache.clear();
+
+    // 2. Tải lại danh sách bài hát
+    await _loadSongs();
+
+    // 3. Thông báo cho Tab Playlist cập nhật lại UI
+    _playlistTabKey.currentState?.refresh();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF64B5F6),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 1),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(15.0)),
+          ),
+          content: const Text(
+            'Đã cập nhật danh sách!',
+            style: TextStyle(color: Colors.black, fontSize: 18),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final accentColor = Theme.of(context).colorScheme.primary;
@@ -134,13 +162,16 @@ class _ListViewScreenState extends State<ListViewScreen>
       appBar: AppBar(
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         centerTitle: true,
-        title: Text(
-          appBarTitle,
-          style: TextStyle(
-            color: accentColor,
-            letterSpacing: 3.0,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            appBarTitle,
+            style: TextStyle(
+              color: accentColor,
+              letterSpacing: 1.5,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         leading: IconButton(
@@ -172,60 +203,52 @@ class _ListViewScreenState extends State<ListViewScreen>
               );
             },
           ),
-          IconButton(
-            icon: Icon(Icons.refresh, color: accentColor),
-            tooltip: 'Làm mới danh sách',
-            onPressed: () {
-              // 1. Xóa bộ nhớ đệm playlist
-              globalPlaylistCache.clear();
-
-              // 2. Tải lại danh sách bài hát
-              _loadSongs();
-
-              // 3. Thông báo cho Tab Playlist cập nhật lại UI
-              _playlistTabKey.currentState?.refresh();
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: const Color(0xFF64B5F6),
-                  behavior: SnackBarBehavior.floating,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(15.0)),
-                  ),
-                  content: const Text(
-                    'Đã làm mới toàn bộ danh sách!',
-                    style: TextStyle(color: Colors.black, fontSize: 18),
-                  ),
-                ),
-              );
-            },
-          ),
         ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: accentColor,
           unselectedLabelColor: accentColor,
           indicatorColor: accentColor,
-          labelPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 2.0),
           onTap: (index) {
             _tabController.animateTo(index);
           },
           tabs: const [
             Tab(
               icon: Icon(Icons.music_note),
-              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Bài hát')),
+              child: Text(
+                'Bài hát',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+              ),
             ),
             Tab(
               icon: Icon(Icons.download_for_offline),
-              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Đã tải')),
+              child: Text(
+                'Đã tải',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+              ),
             ),
             Tab(
               icon: Icon(Icons.queue_music),
-              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Danh sách')),
+              child: Text(
+                'Danh sách',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+              ),
             ),
             Tab(
               icon: Icon(Icons.language),
-              child: FittedBox(fit: BoxFit.scaleDown, child: Text('Online')),
+              child: Text(
+                'Online',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+              ),
             ),
           ],
         ),
@@ -246,6 +269,7 @@ class _ListViewScreenState extends State<ListViewScreen>
                     });
                   },
                   onSongRenamed: _loadSongs,
+                  onRefresh: _handleRefresh,
                 ),
                 TabDanhSachTai(
                   allSongs: _allSongs,
@@ -258,9 +282,17 @@ class _ListViewScreenState extends State<ListViewScreen>
                     });
                   },
                   onSongRenamed: _loadSongs,
+                  onRefresh: _handleRefresh,
                 ),
-                TabDanhSachPhat(key: _playlistTabKey, audioQuery: _audioQuery),
-                TabOnline(audioPlayer: _musicController.audioPlayer),
+                TabDanhSachPhat(
+                  key: _playlistTabKey,
+                  audioQuery: _audioQuery,
+                  onRefresh: _handleRefresh,
+                ),
+                TabOnline(
+                  audioPlayer: _musicController.audioPlayer,
+                  onRefresh: _handleRefresh,
+                ),
               ],
             ),
       bottomNavigationBar: ValueListenableBuilder<MediaItem?>(

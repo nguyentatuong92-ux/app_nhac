@@ -7,8 +7,9 @@ import 'music_controller.dart';
 
 class TabDanhSachPhat extends StatefulWidget {
   final OnAudioQuery audioQuery;
+  final Future<void> Function()? onRefresh;
 
-  const TabDanhSachPhat({super.key, required this.audioQuery});
+  const TabDanhSachPhat({super.key, required this.audioQuery, this.onRefresh});
 
   @override
   State<TabDanhSachPhat> createState() => TabDanhSachPhatState();
@@ -16,11 +17,18 @@ class TabDanhSachPhat extends StatefulWidget {
 
 class TabDanhSachPhatState extends State<TabDanhSachPhat> {
   final MusicController _musicController = MusicController();
+  final ScrollController _scrollController = ScrollController();
 
   void refresh() {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   void _showCreatePlaylistDialog() {
@@ -110,132 +118,157 @@ class TabDanhSachPhatState extends State<TabDanhSachPhat> {
   @override
   Widget build(BuildContext context) {
     final accentColor = Theme.of(context).colorScheme.primary;
-    return Column(
-      children: [
-        ValueListenableBuilder<List>(
-          valueListenable: OnlineMusicController.onlinePlaylist,
-          builder: (context, playlist, _) {
-            return ListTile(
-              leading: Icon(Icons.language, color: accentColor, size: 40),
-              title: Text(
-                'Danh sách nhạc Online',
-                style: TextStyle(
-                  color: accentColor,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh ?? () async {},
+      color: accentColor,
+      child: Column(
+        children: [
+          ValueListenableBuilder<List>(
+            valueListenable: OnlineMusicController.onlinePlaylist,
+            builder: (context, playlist, _) {
+              return ListTile(
+                leading: Icon(Icons.language, color: accentColor, size: 40),
+                title: Text(
+                  'Danh sách nhạc Online',
+                  style: TextStyle(
+                    color: accentColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              subtitle: Text(
-                '${playlist.length} bài hát được thêm',
-                style: TextStyle(color: accentColor),
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => OnlinePlaylistDetailsScreen(
-                      audioPlayer: _musicController.audioPlayer,
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-        Divider(color: accentColor, height: 1),
-        ListTile(
-          leading: Icon(Icons.add_circle, color: accentColor, size: 40),
-          title: Text(
-            'Tạo danh sách phát mới',
-            style: TextStyle(
-              color: accentColor,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          onTap: _showCreatePlaylistDialog,
-        ),
-        Divider(color: accentColor, height: 1),
-        Expanded(
-          child: FutureBuilder<List<PlaylistModel>>(
-            future: widget.audioQuery.queryPlaylists(),
-            builder: (context, item) {
-              if (item.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(color: accentColor),
-                );
-              }
-              if (item.data == null || item.data!.isEmpty) {
-                return Center(
-                  child: Text(
-                    'Chưa có danh sách phát.',
-                    style: TextStyle(color: accentColor, fontSize: 22),
-                  ),
-                );
-              }
-
-              List<PlaylistModel> playlists = item.data!;
-              return ListView.builder(
-                itemCount: playlists.length,
-                itemBuilder: (context, index) {
-                  int songCount = playlists[index].numOfSongs;
-                  if (globalPlaylistCache.containsKey(playlists[index].id)) {
-                    songCount =
-                        globalPlaylistCache[playlists[index].id]!.length;
-                  }
-
-                  return ListTile(
-                    leading: Icon(
-                      Icons.queue_music,
-                      color: accentColor,
-                      size: 40,
-                    ),
-                    title: Text(
-                      playlists[index].playlist,
-                      style: TextStyle(color: accentColor, fontSize: 18),
-                    ),
-                    subtitle: FutureBuilder<String>(
-                      future: _getPlaylistTotalDuration(playlists[index].id),
-                      builder: (context, snapshot) {
-                        String timeString = snapshot.data ?? "";
-                        return Text(
-                          '$songCount bài hát$timeString',
-                          style: TextStyle(color: accentColor),
-                        );
-                      },
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        color: Colors.indigoAccent,
-                        size: 30,
+                subtitle: Text(
+                  '${playlist.length} bài hát được thêm',
+                  style: TextStyle(color: accentColor),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OnlinePlaylistDetailsScreen(
+                        audioPlayer: _musicController.audioPlayer,
                       ),
-                      onPressed: () async {
-                        await widget.audioQuery.removePlaylist(
-                          playlists[index].id,
-                        );
-                        globalPlaylistCache.remove(playlists[index].id);
-                        setState(() {});
-                      },
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PlaylistDetailsScreen(
-                            playlist: playlists[index],
-                            audioQuery: widget.audioQuery,
-                          ),
-                        ),
-                      ).then((value) => setState(() {}));
-                    },
                   );
                 },
               );
             },
           ),
-        ),
-      ],
+          Divider(color: accentColor, height: 1),
+          ListTile(
+            leading: Icon(Icons.add_circle, color: accentColor, size: 40),
+            title: Text(
+              'Tạo danh sách phát mới',
+              style: TextStyle(
+                color: accentColor,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            onTap: _showCreatePlaylistDialog,
+          ),
+          Divider(color: accentColor, height: 1),
+          Expanded(
+            child: FutureBuilder<List<PlaylistModel>>(
+              future: widget.audioQuery.queryPlaylists(),
+              builder: (context, item) {
+                if (item.connectionState == ConnectionState.waiting) {
+                  return Center(
+                    child: CircularProgressIndicator(color: accentColor),
+                  );
+                }
+                if (item.data == null || item.data!.isEmpty) {
+                  return ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.4,
+                        child: Center(
+                          child: Text(
+                            'Chưa có danh sách phát.',
+                            style: TextStyle(color: accentColor, fontSize: 22),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                List<PlaylistModel> playlists = item.data!;
+                return RawScrollbar(
+                  controller: _scrollController,
+                  thumbVisibility: true,
+                  thickness: 6.0,
+                  radius: const Radius.circular(10),
+                  thumbColor: accentColor.withValues(alpha: 0.6),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: playlists.length,
+                    itemBuilder: (context, index) {
+                      int songCount = playlists[index].numOfSongs;
+                      if (globalPlaylistCache.containsKey(
+                        playlists[index].id,
+                      )) {
+                        songCount =
+                            globalPlaylistCache[playlists[index].id]!.length;
+                      }
+
+                      return ListTile(
+                        leading: Icon(
+                          Icons.queue_music,
+                          color: accentColor,
+                          size: 40,
+                        ),
+                        title: Text(
+                          playlists[index].playlist,
+                          style: TextStyle(color: accentColor, fontSize: 18),
+                        ),
+                        subtitle: FutureBuilder<String>(
+                          future: _getPlaylistTotalDuration(
+                            playlists[index].id,
+                          ),
+                          builder: (context, snapshot) {
+                            String timeString = snapshot.data ?? "";
+                            return Text(
+                              '$songCount bài hát$timeString',
+                              style: TextStyle(color: accentColor),
+                            );
+                          },
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(
+                            Icons.delete,
+                            color: Colors.indigoAccent,
+                            size: 30,
+                          ),
+                          onPressed: () async {
+                            await widget.audioQuery.removePlaylist(
+                              playlists[index].id,
+                            );
+                            globalPlaylistCache.remove(playlists[index].id);
+                            setState(() {});
+                          },
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PlaylistDetailsScreen(
+                                playlist: playlists[index],
+                                audioQuery: widget.audioQuery,
+                              ),
+                            ),
+                          ).then((value) => setState(() {}));
+                        },
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

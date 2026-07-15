@@ -193,30 +193,36 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         title: Row(
           children: [
-            ValueListenableBuilder<MediaItem?>(
-              valueListenable: _musicController.currentItem,
-              builder: (context, item, _) {
-                String title = "Tá Tưởng";
-                final source = item?.extras?['source'];
-                if (source == 'online') {
-                  title = "Nhạc Online";
-                } else if (source == 'online_playlist') {
-                  title = "DS Online";
-                } else if (source == 'download') {
-                  title = "DS tải về";
-                } else if (source == 'offline') {
-                  title = "Bài hát";
-                } else if (source != null) {
-                  title = source;
-                }
-                return Text(
-                  title,
-                  style: TextStyle(
-                    color: accentColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              },
+            Expanded(
+              child: ValueListenableBuilder<MediaItem?>(
+                valueListenable: _musicController.currentItem,
+                builder: (context, item, _) {
+                  String title = "Tá Tưởng";
+                  final source = item?.extras?['source'];
+                  if (source == 'online') {
+                    title = "Nhạc Online";
+                  } else if (source == 'online_playlist') {
+                    title = "DS Online";
+                  } else if (source == 'download') {
+                    title = "DS tải về";
+                  } else if (source == 'offline') {
+                    title = "Bài hát";
+                  } else if (source != null) {
+                    title = source;
+                  }
+                  return FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: accentColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
             if (_isOffline)
               const Padding(
@@ -234,19 +240,6 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: Icon(Icons.settings_outlined, color: accentColor, size: 32),
             onPressed: _showSettingsBottomSheet,
-          ),
-          IconButton(
-            icon: Icon(Icons.timer_outlined, color: accentColor, size: 38),
-            onPressed: _showSleepTimerBottomSheet,
-          ),
-          IconButton(
-            icon: Icon(
-              _showVolumeSlider ? Icons.volume_up : Icons.volume_down,
-              color: accentColor,
-              size: 38,
-            ),
-            onPressed: () =>
-                setState(() => _showVolumeSlider = !_showVolumeSlider),
           ),
         ],
       ),
@@ -352,15 +345,22 @@ class _HomeScreenState extends State<HomeScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         IconButton(
-          icon: Icon(Icons.queue_music, color: accentColor, size: 30),
+          iconSize: 30,
+          icon: Icon(Icons.queue_music, color: accentColor),
           onPressed: () =>
               DanhSachDangPhat.show(context, _musicController.audioPlayer),
+        ),
+        IconButton(
+          iconSize: 30,
+          icon: Icon(Icons.timer_outlined, color: accentColor),
+          onPressed: _showSleepTimerBottomSheet,
         ),
         StreamBuilder<LoopMode>(
           stream: _musicController.audioPlayer.loopModeStream,
           builder: (context, snapshot) {
             final loopMode = snapshot.data ?? LoopMode.off;
             return IconButton(
+              iconSize: 30,
               icon: Icon(
                 loopMode == LoopMode.off
                     ? Icons.repeat
@@ -368,7 +368,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? Icons.repeat
                           : Icons.repeat_one),
                 color: loopMode == LoopMode.off ? Colors.grey : accentColor,
-                size: 30,
               ),
               onPressed: () {
                 final nextMode = loopMode == LoopMode.off
@@ -418,6 +417,15 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             );
           },
+        ),
+        IconButton(
+          iconSize: 32, // Tăng nhẹ để cân bằng thị giác
+          icon: Icon(
+            _showVolumeSlider ? Icons.volume_up : Icons.volume_down,
+            color: accentColor,
+          ),
+          onPressed: () =>
+              setState(() => _showVolumeSlider = !_showVolumeSlider),
         ),
       ],
     );
@@ -647,128 +655,169 @@ class _HomeScreenState extends State<HomeScreen> {
     showModalBottomSheet(
       backgroundColor: Theme.of(context).cardColor,
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
-      builder: (c) => SafeArea(
-        bottom: true,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                "Cài đặt hệ thống",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const Divider(),
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, _) {
-                return SwitchListTile(
-                  title: const Text("Chế độ tối"),
-                  secondary: const Icon(Icons.dark_mode),
-                  value: themeProvider.isDarkMode,
-                  onChanged: (val) => themeProvider.toggleTheme(),
-                );
-              },
-            ),
-            const Divider(),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Màu sắc chủ đạo",
-                  style: TextStyle(fontWeight: FontWeight.bold),
+      builder: (c) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => SafeArea(
+          bottom: true,
+          child: SingleChildScrollView(
+            controller: scrollController,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text(
+                    "Cài đặt hệ thống",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-            ),
-            SizedBox(
-              height: 50,
-              child: Consumer<ThemeProvider>(
-                builder: (context, themeProvider, _) {
-                  return ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children:
-                        [
-                          Colors.tealAccent,
-                          themeProvider.isDarkMode
-                              ? Colors.blueAccent
-                              : Colors.brown,
-                          //Colors.blueAccent,
-                          Colors.lightBlue,
-                          Colors.orangeAccent,
-                          Colors.purpleAccent,
-                          themeProvider.isDarkMode
-                              ? Colors.white70
-                              : Colors.black,
-                          themeProvider.isDarkMode
-                              ? Colors.lightGreenAccent
-                              : Colors.red,
-                          //Colors.lightGreenAccent,
-                        ].map((color) {
-                          final isSelected =
-                              themeProvider.accentColor.toARGB32() ==
-                              color.toARGB32();
-                          return GestureDetector(
-                            onTap: () => themeProvider.setAccentColor(color),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border: isSelected
-                                    ? Border.all(
-                                        color: themeProvider.isDarkMode
-                                            ? Colors.white
-                                            : Colors.black,
-                                        width: 3,
-                                      )
-                                    : null,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                  );
-                },
-              ),
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.delete_sweep),
-              title: const Text("Tự động xóa bộ nhớ đệm"),
-              subtitle: Text("Hiện tại: $_cacheClearDays ngày"),
-              onTap: () {
-                Navigator.pop(c);
-                _showCacheDayPicker();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.cleaning_services),
-              title: const Text("Xóa bộ nhớ đệm ngay lập tức"),
-              onTap: () async {
-                Navigator.pop(c);
-                await _clearAppCache();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      behavior: SnackBarBehavior.floating,
-                      content: const Text("Đã xóa sạch bộ nhớ đệm!"),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
+                const Divider(),
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, _) {
+                    return SwitchListTile(
+                      title: const Text("Chế độ tối"),
+                      secondary: const Icon(Icons.dark_mode),
+                      value: themeProvider.isDarkMode,
+                      onChanged: (val) => themeProvider.toggleTheme(),
+                    );
+                  },
+                ),
+                const Divider(),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Màu sắc chủ đạo",
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  );
-                }
-              },
+                  ),
+                ),
+                SizedBox(
+                  height: 50,
+                  child: Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, _) {
+                      return ListView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children:
+                            [
+                              Colors.tealAccent,
+                              themeProvider.isDarkMode
+                                  ? Colors.blueAccent
+                                  : Colors.brown,
+                              Colors.lightBlue,
+                              Colors.orangeAccent,
+                              Colors.purpleAccent,
+                              themeProvider.isDarkMode
+                                  ? Colors.white70
+                                  : Colors.black,
+                              themeProvider.isDarkMode
+                                  ? Colors.lightGreenAccent
+                                  : Colors.red,
+                            ].map((color) {
+                              final isSelected =
+                                  themeProvider.accentColor.toARGB32() ==
+                                  color.toARGB32();
+                              return GestureDetector(
+                                onTap: () =>
+                                    themeProvider.setAccentColor(color),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                    border: isSelected
+                                        ? Border.all(
+                                            color: themeProvider.isDarkMode
+                                                ? Colors.white
+                                                : Colors.black,
+                                            width: 3,
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                      );
+                    },
+                  ),
+                ),
+                const Divider(),
+                // Tối ưu phần xóa bộ nhớ đệm để không bị chồng chữ
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(c);
+                    _showCacheDayPicker();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.delete_sweep),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Tự động xóa bộ nhớ đệm",
+                                style: TextStyle(fontSize: 16),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                "Hiện tại: $_cacheClearDays ngày",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: Colors.grey[400]),
+                      ],
+                    ),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.cleaning_services),
+                  title: const Text("Xóa bộ nhớ đệm ngay lập tức"),
+                  onTap: () async {
+                    Navigator.pop(c);
+                    await _clearAppCache();
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                          behavior: SnackBarBehavior.floating,
+                          content: const Text("Đã xóa sạch bộ nhớ đệm!"),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(height: 40),
+              ],
             ),
-            const SizedBox(height: 40),
-          ],
+          ),
         ),
       ),
     );

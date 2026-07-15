@@ -16,6 +16,7 @@ class TabDanhSachTai extends StatefulWidget {
   final Set<int> deletedSongIds;
   final Function(int) onSongDeleted;
   final VoidCallback onSongRenamed;
+  final Future<void> Function()? onRefresh;
 
   const TabDanhSachTai({
     super.key,
@@ -25,6 +26,7 @@ class TabDanhSachTai extends StatefulWidget {
     required this.deletedSongIds,
     required this.onSongDeleted,
     required this.onSongRenamed,
+    this.onRefresh,
   });
 
   @override
@@ -33,9 +35,6 @@ class TabDanhSachTai extends StatefulWidget {
 
 class _TabDanhSachTaiState extends State<TabDanhSachTai> {
   final ScrollController _scrollController = ScrollController();
-  final List<String> _alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split('');
-  String _currentLetter = "A";
-  final double _itemHeight = 75.0;
   final MusicController _musicController = MusicController();
 
   bool _isSearching = false;
@@ -45,60 +44,12 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_dongBoChuCaiKhiCuon);
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _dongBoChuCaiKhiCuon() {
-    if (!_scrollController.hasClients) return;
-
-    List<SongModel> songs = widget.allSongs
-        .where(
-          (s) =>
-              !widget.deletedSongIds.contains(s.id) &&
-              s.data.contains('/Download/'),
-        )
-        .toList();
-    if (songs.isEmpty) return;
-
-    int currentIndex = (_scrollController.offset / _itemHeight).floor();
-    if (currentIndex >= 0 && currentIndex < songs.length) {
-      String title = songs[currentIndex].displayNameWOExt.trim();
-      if (title.isNotEmpty) {
-        String firstLetter = title[0].toUpperCase();
-        if (!_alphabet.contains(firstLetter)) firstLetter = "#";
-
-        if (_currentLetter != firstLetter) {
-          setState(() {
-            _currentLetter = firstLetter;
-          });
-        }
-      }
-    }
-  }
-
-  void _cuonDenChuCai(String letter, List<SongModel> songs) {
-    int targetIndex = songs.indexWhere((song) {
-      String title = song.displayNameWOExt.trim().toUpperCase();
-      if (letter == "#") return RegExp(r'^[^A-Z]').hasMatch(title);
-      return title.startsWith(letter);
-    });
-
-    if (targetIndex != -1) {
-      setState(() {
-        _currentLetter = letter;
-      });
-      _scrollController.animateTo(
-        targetIndex * _itemHeight,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
   }
 
   String _formatDuration(int? ms) {
@@ -449,6 +400,9 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
       return titleMatches || artistMatches;
     }).toList();
 
+    // Sắp xếp bài hát mới tải lên đầu (theo dateAdded giảm dần)
+    songs.sort((a, b) => (b.dateAdded ?? 0).compareTo(a.dateAdded ?? 0));
+
     return Column(
       children: [
         Padding(
@@ -504,27 +458,36 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
                           });
                         },
                       )
-                    : Row(
-                        children: [
-                          Icon(
-                            Icons.download_for_offline,
-                            color: accentColor,
-                            size: 18,
+                    : Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.download_for_offline,
+                                color: accentColor,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Danh sách tải",
+                                style: TextStyle(
+                                  color: accentColor,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "(${songs.length} bài)",
+                                style: TextStyle(
+                                  color: accentColor.withValues(alpha: 0.7),
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Danh sách tải",
-                            style: TextStyle(color: accentColor, fontSize: 16),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "(${songs.length} bài)",
-                            style: TextStyle(
-                              color: accentColor.withValues(alpha: 0.7),
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
               ),
               if (!_isSearching)
@@ -555,9 +518,16 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
                       );
                     }
 
-                    return Stack(
-                      children: [
-                        ValueListenableBuilder(
+                    return RefreshIndicator(
+                      onRefresh: widget.onRefresh ?? () async {},
+                      color: accentColor,
+                      child: RawScrollbar(
+                        controller: _scrollController,
+                        thumbVisibility: true,
+                        thickness: 6.0,
+                        radius: const Radius.circular(10),
+                        thumbColor: accentColor.withValues(alpha: 0.6),
+                        child: ValueListenableBuilder(
                           valueListenable: _musicController.currentItem,
                           builder: (context, currentItem, _) {
                             return ListView.separated(
@@ -734,91 +704,7 @@ class _TabDanhSachTaiState extends State<TabDanhSachTai> {
                             );
                           },
                         ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                              right: 8.0,
-                              bottom: 20.0,
-                            ),
-                            child: FractionallySizedBox(
-                              heightFactor: 0.75,
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  return GestureDetector(
-                                    onVerticalDragUpdate: (details) {
-                                      double letterHeight =
-                                          constraints.maxHeight /
-                                          _alphabet.length;
-                                      int index =
-                                          (details.localPosition.dy /
-                                                  letterHeight)
-                                              .floor();
-                                      if (index >= 0 &&
-                                          index < _alphabet.length) {
-                                        _cuonDenChuCai(_alphabet[index], songs);
-                                      }
-                                    },
-                                    child: Container(
-                                      width: 26,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8.0,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context).cardColor,
-                                        borderRadius: BorderRadius.circular(
-                                          20.0,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withAlpha(76),
-                                            blurRadius: 5,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: _alphabet.map((letter) {
-                                          bool isSelected =
-                                              _currentLetter == letter;
-                                          return Expanded(
-                                            child: GestureDetector(
-                                              onTap: () =>
-                                                  _cuonDenChuCai(letter, songs),
-                                              child: Center(
-                                                child: Text(
-                                                  letter,
-                                                  style: TextStyle(
-                                                    fontFamily: 'Roboto',
-                                                    color: isSelected
-                                                        ? Colors.white
-                                                        : accentColor
-                                                              .withValues(
-                                                                alpha: 0.5,
-                                                              ),
-                                                    fontWeight: isSelected
-                                                        ? FontWeight.bold
-                                                        : FontWeight.normal,
-                                                    fontSize: isSelected
-                                                        ? 10
-                                                        : 8,
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     );
                   },
                 ),
